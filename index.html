@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kiosque — toutes les publications</title>
 <meta name="description" content="Le kiosque rassemble toutes les publications du moment, avec un espace de rédaction complet.">
+
+<!-- PWA -->
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIktpb3NxdWUiLCAic2hvcnRfbmFtZSI6ICJLaW9zcXVlIiwgImRlc2NyaXB0aW9uIjogIkxlIGtpb3NxdWUgZGVzIHB1YmxpY2F0aW9ucyBkZSBsJ1x1MDBlOXF1aXBlIGRlIHJcdTAwZTlkYWN0aW9uIiwgInN0YXJ0X3VybCI6ICIva2lvc3F1ZS8iLCAic2NvcGUiOiAiL2tpb3NxdWUvIiwgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsICJvcmllbnRhdGlvbiI6ICJhbnkiLCAiYmFja2dyb3VuZF9jb2xvciI6ICIjRjBGNEZGIiwgInRoZW1lX2NvbG9yIjogIiMwQTNBOEMiLCAibGFuZyI6ICJmciIsICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxOTIgMTkyJz48cmVjdCB3aWR0aD0nMTkyJyBoZWlnaHQ9JzE5Micgcng9JzMyJyBmaWxsPSclMjMwQTNBOEMnLz48dGV4dCB5PScxMzAnIHg9Jzk2JyBmb250LXNpemU9JzExMCcgdGV4dC1hbmNob3I9J21pZGRsZSc+XHVkODNkXHVkY2YwPC90ZXh0Pjwvc3ZnPiIsICJzaXplcyI6ICIxOTJ4MTkyIiwgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIsICJwdXJwb3NlIjogImFueSBtYXNrYWJsZSJ9LCB7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1MTIgNTEyJz48cmVjdCB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMicgcng9JzgwJyBmaWxsPSclMjMwQTNBOEMnLz48dGV4dCB5PSczNjAnIHg9JzI1NicgZm9udC1zaXplPSczMDAnIHRleHQtYW5jaG9yPSdtaWRkbGUnPlx1ZDgzZFx1ZGNmMDwvdGV4dD48L3N2Zz4iLCAic2l6ZXMiOiAiNTEyeDUxMiIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiLCAicHVycG9zZSI6ICJhbnkgbWFza2FibGUifV0sICJjYXRlZ29yaWVzIjogWyJlZHVjYXRpb24iLCAicHJvZHVjdGl2aXR5Il0sICJzaG9ydGN1dHMiOiBbeyJuYW1lIjogIkFjY3VlaWwiLCAidXJsIjogIi9raW9zcXVlLyMvIiwgImRlc2NyaXB0aW9uIjogIlBhZ2UgZCdhY2N1ZWlsIHB1YmxpcXVlIn0sIHsibmFtZSI6ICJBZG1pbmlzdHJhdGlvbiIsICJ1cmwiOiAiL2tpb3NxdWUvIy9hZG1pbiIsICJkZXNjcmlwdGlvbiI6ICJFc3BhY2UgZGUgclx1MDBlOWRhY3Rpb24ifV19">
+<meta name="theme-color" content="#0A3A8C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kiosque">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='30' fill='%230A3A8C'/><text y='125' x='90' font-size='100' text-anchor='middle'>📰</text></svg>">
 <style>
 /* =====================================================================
    KIOSQUE — feuille de style principale
@@ -6150,6 +6159,17 @@ window.addEventListener('hashchange', router);
   }, 8000);
 })();
 
+</script>
+
+<!-- Enregistrement du Service Worker (PWA) -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/kiosque/sw.js')
+      .then(() => console.log('Service Worker enregistré'))
+      .catch((err) => console.warn('Service Worker non enregistré :', err));
+  });
+}
 </script>
 
 </body>
