@@ -5877,6 +5877,39 @@ document.getElementById('form-connexion').addEventListener('submit', (evenement)
   }
 
   /* ======================================================================
+   * SYNCHRONISATION INTER-ONGLETS (storage event)
+   * ----------------------------------------------------------------------
+   * Le navigateur émet un événement "storage" sur TOUS les onglets ouverts
+   * sauf celui qui a effectué la modification. On l'utilise pour rafraîchir
+   * l'interface automatiquement quand un autre onglet change les données.
+   * ===================================================================== */
+  window.addEventListener('storage', (evenement) => {
+    // On ne réagit qu'aux clés de l'application Kiosque.
+    const clesSuivies = Object.values(Storage.KEYS);
+    if (!clesSuivies.includes(evenement.key)) return;
+
+    // Si la session a changé dans un autre onglet (connexion / déconnexion),
+    // on redirige vers la bonne page plutôt que de rester sur une page incohérente.
+    if (evenement.key === Storage.KEYS.SESSION) {
+      const sessionActive = Auth.isLoggedIn();
+      const surPageAdmin = document.querySelector('[data-page="admin"]')?.classList.contains('page-actif');
+      if (!sessionActive && surPageAdmin) {
+        window.location.hash = '#/login';
+      } else if (sessionActive && document.querySelector('[data-page="login"]')?.classList.contains('page-actif')) {
+        window.location.hash = '#/admin';
+      }
+      return;
+    }
+
+    // Pour les données (blogs, articles, paramètres, utilisateurs), on
+    // rafraîchit simplement la vue courante sans recharger la page.
+    if (evenement.key === Storage.KEYS.SETTINGS) {
+      appliquerParametresSite();
+    }
+    rafraichirTout();
+  });
+
+  /* ======================================================================
    * PARAMÈTRES — vue réservée aux admins
    * ==================================================================== */
 
@@ -6216,6 +6249,26 @@ function router() {
 
 window.addEventListener('hashchange', router);
 router();
+
+/* ------------------------------------------------------------------
+ * SYNCHRONISATION INTER-ONGLETS — pages publiques
+ * Quand un autre onglet (ex : l'admin) modifie les données, on
+ * rafraîchit automatiquement la page publique affichée.
+ * ------------------------------------------------------------------ */
+window.addEventListener('storage', (evenement) => {
+  const clesSuivies = ['blogs', 'articles', 'settings'];
+  if (!clesSuivies.includes(evenement.key)) return;
+
+  const { chemin, params } = analyserHash();
+
+  if (chemin === 'accueil') {
+    prepareAccueilPage();
+    if (evenement.key === 'settings') appliquerParametresSite();
+  } else if (chemin === 'blog') {
+    prepareBlogPage(params.get('id'));
+    if (evenement.key === 'settings') appliquerParametresSite();
+  }
+});
 
 </script>
 
