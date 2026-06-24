@@ -3547,66 +3547,39 @@ table.table-donnees tbody tr:hover { background: rgba(27, 42, 65, 0.035); }
 //# sourceMappingURL=quill.min.js.map
 </script>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 /**
- * storage.js
+ * storage.js — Firebase Firestore (synchronisation temps réel multi-appareils)
  * ----------------------------------------------------------------------
- * Couche d'accès aux données. Toute l'application "Kiosque" persiste ses
- * données dans le LocalStorage du navigateur via 5 clés :
- *   - blogs      : liste des publications (blogs)
- *   - articles   : liste des articles, rattachés à un blog via blogId
- *   - users      : comptes autorisés à se connecter à la rédaction
- *   - session    : session de connexion courante (ou absente)
- *   - settings   : réglages globaux du site
- *
- * Ce module est le SEUL endroit du code qui lit/écrit directement le
- * LocalStorage. Les autres scripts (auth.js, admin.js, blog.js) passent
- * systématiquement par les fonctions exposées ici. Cela centralise la
- * logique de persistance et évite les incohérences de format.
+ * Architecture : cache mémoire local mis à jour en temps réel par
+ * onSnapshot. Toutes les fonctions restent synchrones pour le code
+ * existant ; Firestore est la source de vérité partagée entre appareils.
+ * La session reste dans localStorage (propre à chaque navigateur/appareil).
  * ----------------------------------------------------------------------
  */
 
-/**
- * Zone de stockage effective utilisée par toute l'application.
- * ----------------------------------------------------------------------
- * Certains environnements interdisent l'accès au LocalStorage et lèvent
- * une erreur dès le premier appel (navigation privée stricte de Safari,
- * ouverture du fichier en file:// sur certains navigateurs, prévisualisation
- * dans un cadre/iframe sans accès au stockage, cookies tiers bloqués…).
- *
- * Sans protection, une telle erreur surviendrait dès le chargement du
- * script et empêcherait TOUT le reste de s'exécuter (y compris les
- * boutons de l'interface, comme celui de connexion). On teste donc
- * l'accès une fois au démarrage et on bascule sur un stockage en mémoire
- * si besoin : l'application reste pleinement fonctionnelle pendant la
- * session, mais les données ne survivront pas à la fermeture de l'onglet.
- */
-function creerStockageMemoire() {
-  const memoire = new Map();
-  return {
-    getItem: (cle) => (memoire.has(cle) ? memoire.get(cle) : null),
-    setItem: (cle, valeur) => { memoire.set(cle, String(valeur)); },
-    removeItem: (cle) => { memoire.delete(cle); }
-  };
-}
+// ── Firebase init ──────────────────────────────────────────────────────
+firebase.initializeApp({
+  apiKey: "AIzaSyARV_E4XtJS13CndRnYQqtjVGP7LcxxPzs",
+  authDomain: "kiosque-college.firebaseapp.com",
+  projectId: "kiosque-college",
+  storageBucket: "kiosque-college.firebasestorage.app",
+  messagingSenderId: "121180432047",
+  appId: "1:121180432047:web:1595afeebc04a17483165a"
+});
+const db = firebase.firestore();
 
-let zoneStockage;
-let stockagePersistant = true;
-try {
-  const cleTest = '__kiosque_test__';
-  window.localStorage.setItem(cleTest, '1');
-  window.localStorage.removeItem(cleTest);
-  zoneStockage = window.localStorage;
-} catch (erreurStockage) {
-  console.warn('LocalStorage indisponible : bascule sur un stockage en mémoire (non persistant).', erreurStockage);
-  zoneStockage = creerStockageMemoire();
-  stockagePersistant = false;
-}
+// ── Cache mémoire local (source synchrone pour tout le reste du code) ──
+const _cache = {
+  blogs: [],
+  articles: [],
+  users: [],
+  settings: null
+};
 
-/**
- * Affiche une petite bannière flottante non bloquante (utilisée pour les
- * avertissements liés au stockage et pour les erreurs inattendues).
- */
+// ── Utilitaires ────────────────────────────────────────────────────────
 function afficherBanniereKiosque(texte, couleurFond) {
   const banniere = document.createElement('div');
   banniere.setAttribute('role', 'status');
@@ -3622,355 +3595,142 @@ function afficherBanniereKiosque(texte, couleurFond) {
   setTimeout(() => banniere.remove(), 9000);
 }
 
-// Filet de sécurité : si une erreur JavaScript imprévue survient malgré
-// tout, on l'affiche visiblement plutôt que de laisser l'interface
-// sembler ne "rien faire" sans aucune explication.
-window.addEventListener('error', (evenement) => {
-  console.error('Erreur Kiosque non interceptée :', evenement.error || evenement.message);
+window.addEventListener('error', (ev) => {
+  console.error('Erreur Kiosque non interceptée :', ev.error || ev.message);
   afficherBanniereKiosque(
-    "Une erreur inattendue est survenue. Ouvrez la console du navigateur (F12) pour le détail.",
+    "Une erreur inattendue est survenue. Ouvrez la console (F12) pour le détail.",
     '#8C2F39'
   );
 });
 
+// ── Fonction appelée par les listeners Firestore pour rafraîchir l'UI ──
+function _onDataChange(source) {
+  // On rafraîchit la vue courante selon la page active
+  try {
+    const hash = window.location.hash.replace(/^#\/?/, '').split('?')[0] || 'accueil';
+
+    if (hash === 'accueil' && typeof prepareAccueilPage === 'function') {
+      prepareAccueilPage();
+      if (source === 'settings' && typeof appliquerParametresSite === 'function') appliquerParametresSite();
+    } else if (hash === 'blog' && typeof afficherArticlesBlog === 'function') {
+      afficherArticlesBlog();
+      if (source === 'settings' && typeof appliquerParametresSite === 'function') appliquerParametresSite();
+    } else if (hash === 'admin' && typeof rafraichirTout === 'function') {
+      rafraichirTout();
+      if (source === 'settings' && typeof appliquerParametresSite === 'function') appliquerParametresSite();
+    }
+  } catch(e) { /* rafraîchissement non encore disponible au démarrage */ }
+}
+
+// ── Listeners temps réel Firestore (onSnapshot) ────────────────────────
+db.collection('blogs').onSnapshot(snap => {
+  _cache.blogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  _onDataChange('blogs');
+}, err => console.warn('Firestore blogs:', err));
+
+db.collection('articles').onSnapshot(snap => {
+  _cache.articles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  _onDataChange('articles');
+}, err => console.warn('Firestore articles:', err));
+
+db.collection('users').onSnapshot(snap => {
+  _cache.users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}, err => console.warn('Firestore users:', err));
+
+db.doc('settings/global').onSnapshot(snap => {
+  if (snap.exists) {
+    _cache.settings = snap.data();
+    _onDataChange('settings');
+  }
+}, err => console.warn('Firestore settings:', err));
+
+// ── Module Storage (API identique à l'ancienne version localStorage) ───
 const Storage = (() => {
 
-  // Clés utilisées dans le stockage.
   const KEYS = {
-    BLOGS: 'blogs',
-    ARTICLES: 'articles',
-    USERS: 'users',
-    SESSION: 'session',
-    SETTINGS: 'settings'
+    BLOGS: 'blogs', ARTICLES: 'articles',
+    USERS: 'users', SESSION: 'session', SETTINGS: 'settings'
   };
 
-  // Liste fermée des statuts possibles pour un article.
   const STATUTS = ['Brouillon', 'À valider', 'À publier', 'En ligne', 'Hors ligne', 'À supprimer'];
+  const ROLES_UTILISATEUR = ['admin'];
 
-  /* ----------------------------------------------------------------------
-   * Utilitaires bas niveau
-   * -------------------------------------------------------------------- */
-
-  /** Lit une clé et la parse en JSON. Retourne `fallback` si absente ou invalide. */
-  function read(key, fallback) {
-    try {
-      const raw = zoneStockage.getItem(key);
-      if (raw === null) return fallback;
-      return JSON.parse(raw);
-    } catch (err) {
-      console.warn(`Storage: lecture impossible pour la clé "${key}", valeur par défaut utilisée.`, err);
-      return fallback;
-    }
-  }
-
-  /** Écrit une valeur (sérialisée en JSON). */
-  function write(key, value) {
-    try {
-      zoneStockage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch (err) {
-      console.error(`Storage: écriture impossible pour la clé "${key}".`, err);
-      const estQuotaPlein = err && (err.name === 'QuotaExceededError' || err.code === 22);
-      afficherBanniereKiosque(
-        estQuotaPlein
-          ? "Stockage local plein : impossible d'enregistrer. Essayez de retirer une image ou une pièce jointe, ou de supprimer d'anciens articles."
-          : "Échec de l'enregistrement local. Réessayez ; si le problème persiste, ouvrez la console (F12).",
-        '#8C2F39'
-      );
-      return false;
-    }
-  }
-
-  /** Génère un identifiant unique lisible, préfixé par le type d'entité. */
   function generateId(prefix) {
     const time = Date.now().toString(36);
     const rand = Math.random().toString(36).slice(2, 8);
     return `${prefix}_${time}_${rand}`;
   }
 
-  /** Renvoie une date ISO (utilisée pour dateCreation / dateModification). */
-  function now() {
-    return new Date().toISOString();
+  function now() { return new Date().toISOString(); }
+
+  // ── Session (reste localStorage) ──────────────────────────────────────
+  function getSession() {
+    try {
+      const raw = localStorage.getItem('kiosque_session');
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+  function setSession(session) {
+    try { localStorage.setItem('kiosque_session', JSON.stringify(session)); } catch(e) {}
+  }
+  function clearSession() {
+    try { localStorage.removeItem('kiosque_session'); } catch(e) {}
   }
 
-  /* ----------------------------------------------------------------------
-   * Validation de forme — protège contre un stockage pollué ou incompatible
-   * ----------------------------------------------------------------------
-   * Avec le protocole file://, certains navigateurs partagent le même
-   * espace de stockage entre TOUS les fichiers HTML ouverts localement,
-   * quel que soit leur nom ou leur dossier. Si une clé "users", "blogs"
-   * etc. existe déjà — écrite par un tout autre fichier local — on ne
-   * doit pas lui faire confiance simplement parce qu'elle existe : on
-   * vérifie aussi que sa FORME correspond à ce que l'application attend.
-   * Si ce n'est pas le cas, on régénère les données par défaut.
-   * -------------------------------------------------------------------- */
-
-  function estTableauUtilisateursValide(valeur) {
-    return Array.isArray(valeur) && valeur.length > 0 && valeur.every(
-      u => u && typeof u.username === 'string' && typeof u.password === 'string'
-    );
-  }
-
-  function estTableauBlogsValide(valeur) {
-    return Array.isArray(valeur) && valeur.every(
-      b => b && typeof b.id === 'string' && typeof b.titre === 'string'
-    );
-  }
-
-  function estTableauArticlesValide(valeur) {
-    return Array.isArray(valeur) && valeur.every(
-      a => a && typeof a.id === 'string' && typeof a.blogId === 'string' && typeof a.statut === 'string'
-    );
-  }
-
-  function estReglagesValide(valeur) {
-    return valeur && typeof valeur === 'object' && typeof valeur.siteName === 'string';
-  }
-
-  /* ----------------------------------------------------------------------
-   * Initialisation des données par défaut (premier lancement, ou réparation
-   * automatique si les données existantes sont absentes ou mal formées)
-   * -------------------------------------------------------------------- */
-
-  function seedIfEmpty() {
-    // Réglages globaux du site.
-    if (!estReglagesValide(read(KEYS.SETTINGS, null))) {
-      write(KEYS.SETTINGS, {
-        siteName: 'Kiosque',
-        tagline: 'Le kiosque des publications du moment',
-        articlesParPage: 9,
-        copyright: '© ' + new Date().getFullYear() + ' Kiosque — Tous droits réservés.',
-        emailContact: '',
-        logoEmoji: '📰',
-        couleurPrincipale: '#0A3A8C',
-        couleurAccent: '#CC1533',
-        couleurFond: '#F0F4FF',
-        modeSombre: true,
-        ddnRequis: true,
-        modeMaintenance: false,
-        msgMaintenance: 'Le site est temporairement en maintenance. Revenez bientôt !',
-        ageMinimum: 0,
-        moderationAuto: false,
-        commentairesActifs: false,
-        statutDefaut: 'Brouillon',
-        auteurAffichage: 'nom',
-        mentionsLegales: '<h3>Éditeur du site</h3><p>Ce site est géré par l\'équipe de rédaction du Kiosque.</p><h3>Hébergement</h3><p>Ce site est hébergé localement dans votre navigateur via le LocalStorage.</p><h3>Données personnelles</h3><p>Aucune donnée personnelle n\'est transmise à des tiers. Les données sont stockées uniquement dans votre navigateur.</p><h3>Propriété intellectuelle</h3><p>Tous les contenus publiés sur ce site sont la propriété de leurs auteurs respectifs.</p><h3>Contact</h3><p>Pour toute question, contactez la rédaction.</p>'
-      });
-    }
-
-    // Compte(s) de rédaction par défaut.
-    if (!estTableauUtilisateursValide(read(KEYS.USERS, null))) {
-      write(KEYS.USERS, [
-        {
-          id: generateId('usr'),
-          username: 'admin',
-          password: 'admin123',
-          nom: 'Administrateur',
-          role: 'admin',
-          ddn: '1990-01-01'
-        }
-      ]);
-    }
-
-    // Blogs et articles de démonstration.
-    const blogsExistants = read(KEYS.BLOGS, null);
-    const articlesExistants = read(KEYS.ARTICLES, null);
-    if (!estTableauBlogsValide(blogsExistants) || !estTableauArticlesValide(articlesExistants)) {
-      const blogs = [
-        {
-          id: generateId('blg'),
-          titre: 'Chroniques Urbaines',
-          description: 'Les transformations de nos villes, racontées au fil des rues.',
-          dateCreation: now()
-        },
-        {
-          id: generateId('blg'),
-          titre: 'Carnets de Voyage',
-          description: 'Récits et conseils pour explorer le monde sans filtre.',
-          dateCreation: now()
-        },
-        {
-          id: generateId('blg'),
-          titre: 'Labo Numérique',
-          description: 'Technologie, outils et usages du web décryptés simplement.',
-          dateCreation: now()
-        }
-      ];
-      write(KEYS.BLOGS, blogs);
-
-      const [urbain, voyage, numerique] = blogs;
-      const articles = [
-        {
-          id: generateId('art'),
-          blogId: urbain.id,
-          titre: 'La renaissance des friches industrielles',
-          resume: 'Comment les anciennes usines deviennent des lieux de vie créatifs.',
-          contenu: '<p>De nombreuses villes françaises réinventent leurs friches industrielles en tiers-lieux culturels. Ce mouvement transforme durablement le visage urbain et attire une population en quête de sens et de convivialité.</p>',
-          image: null,
-          pieceJointes: [],
-          auteur: 'Administrateur',
-          dateCreation: now(),
-          dateModification: now(),
-          statut: 'En ligne'
-        },
-        {
-          id: generateId('art'),
-          blogId: urbain.id,
-          titre: 'Vélo, marche, tramway : la ville sans voiture ?',
-          resume: 'Enquête sur les nouvelles mobilités douces en centre-ville.',
-          contenu: '<p>Plusieurs métropoles testent des zones à très faible circulation automobile. Les retours d\'expérience sont contrastés mais globalement positifs pour la qualité de l\'air et le commerce de proximité.</p>',
-          image: null,
-          pieceJointes: [],
-          auteur: 'Administrateur',
-          dateCreation: now(),
-          dateModification: now(),
-          statut: 'À valider'
-        },
-        {
-          id: generateId('art'),
-          blogId: urbain.id,
-          titre: 'Idée d\'article sur les jardins partagés',
-          resume: '',
-          contenu: '',
-          image: null,
-          pieceJointes: [],
-          auteur: 'Administrateur',
-          dateCreation: now(),
-          dateModification: now(),
-          statut: 'Brouillon'
-        },
-        {
-          id: generateId('art'),
-          blogId: voyage.id,
-          titre: 'Trois semaines sur la route des Balkans',
-          resume: 'Itinéraire complet, budget et anecdotes de route.',
-          contenu: '<p>Des plages de Croatie aux montagnes d\'Albanie, ce road-trip de trois semaines révèle une région encore préservée du tourisme de masse, où l\'accueil reste chaleureux et les paysages spectaculaires.</p>',
-          image: null,
-          pieceJointes: [],
-          auteur: 'Administrateur',
-          dateCreation: now(),
-          dateModification: now(),
-          statut: 'En ligne'
-        },
-        {
-          id: generateId('art'),
-          blogId: voyage.id,
-          titre: 'Voyager léger : le guide du sac à dos minimaliste',
-          resume: 'Nos astuces pour partir longtemps avec peu de bagages.',
-          contenu: '<p>Voyager léger n\'est pas qu\'une question de confort physique : c\'est aussi une philosophie qui pousse à se concentrer sur l\'essentiel et à gagner en liberté de mouvement.</p>',
-          image: null,
-          pieceJointes: [],
-          auteur: 'Administrateur',
-          dateCreation: now(),
-          dateModification: now(),
-          statut: 'À publier'
-        },
-        {
-          id: generateId('art'),
-          blogId: numerique.id,
-          titre: 'Comprendre le LocalStorage en 5 minutes',
-          resume: 'Un tour d\'horizon simple du stockage côté navigateur.',
-          contenu: '<p>Le LocalStorage permet de conserver des données directement dans le navigateur, sans serveur. Pratique pour des prototypes ou des applications légères, il a néanmoins des limites de taille et de sécurité à connaître.</p>',
-          image: null,
-          pieceJointes: [],
-          auteur: 'Administrateur',
-          dateCreation: now(),
-          dateModification: now(),
-          statut: 'En ligne'
-        },
-        {
-          id: generateId('art'),
-          blogId: numerique.id,
-          titre: 'Ancien article retiré de la une',
-          resume: 'Contenu désormais obsolète, conservé pour archive.',
-          contenu: '<p>Cet article a été dépublié car les informations qu\'il contenait ne sont plus à jour. Il reste accessible aux membres de la rédaction.</p>',
-          image: null,
-          pieceJointes: [],
-          auteur: 'Administrateur',
-          dateCreation: now(),
-          dateModification: now(),
-          statut: 'Hors ligne'
-        }
-      ];
-      write(KEYS.ARTICLES, articles);
-    }
-  }
-
-  /* ----------------------------------------------------------------------
-   * Accesseurs génériques
-   * -------------------------------------------------------------------- */
-
-  function getBlogs() { return read(KEYS.BLOGS, []); }
-  function saveBlogs(list) { return write(KEYS.BLOGS, list); }
-
-  function getArticles() { return read(KEYS.ARTICLES, []); }
-  function saveArticles(list) { return write(KEYS.ARTICLES, list); }
-
-  function getUsers() { return read(KEYS.USERS, []); }
-
-  function getSession() { return read(KEYS.SESSION, null); }
-  function setSession(session) { return write(KEYS.SESSION, session); }
-  function clearSession() { zoneStockage.removeItem(KEYS.SESSION); }
-
-  function getSettings() { return read(KEYS.SETTINGS, {}); }
-  function saveSettings(settings) { return write(KEYS.SETTINGS, settings); }
-
-  /* ----------------------------------------------------------------------
-   * Blogs : opérations métier
-   * -------------------------------------------------------------------- */
+  // ── Blogs (lecture depuis cache, écriture vers Firestore) ─────────────
+  function getBlogs() { return [..._cache.blogs]; }
 
   function getBlogById(id) {
-    return getBlogs().find(b => b.id === id) || null;
+    return _cache.blogs.find(b => b.id === id) || null;
   }
 
   function createBlog({ titre, description }) {
-    const blogs = getBlogs();
     const blog = {
-      id: generateId('blg'),
       titre: (titre || '').trim() || 'Publication sans titre',
       description: (description || '').trim(),
       dateCreation: now()
     };
-    blogs.push(blog);
-    saveBlogs(blogs);
+    const id = generateId('blg');
+    blog.id = id;
+    db.collection('blogs').doc(id).set(blog).catch(e => {
+      console.error('Firestore createBlog:', e);
+      afficherBanniereKiosque("Erreur d'enregistrement. Vérifiez votre connexion.", '#8C2F39');
+    });
     return blog;
   }
 
   function updateBlog(id, data) {
-    const blogs = getBlogs();
-    const idx = blogs.findIndex(b => b.id === id);
-    if (idx === -1) return null;
-    blogs[idx] = { ...blogs[idx], ...data, id: blogs[idx].id };
-    saveBlogs(blogs);
-    return blogs[idx];
+    const blog = _cache.blogs.find(b => b.id === id);
+    if (!blog) return null;
+    const updated = { ...blog, ...data, id };
+    db.collection('blogs').doc(id).set(updated).catch(e => console.error('Firestore updateBlog:', e));
+    return updated;
   }
 
-  /** Supprime un blog ainsi que tous les articles qui lui sont rattachés. */
   function deleteBlog(id) {
-    const blogs = getBlogs().filter(b => b.id !== id);
-    saveBlogs(blogs);
-    const articles = getArticles().filter(a => a.blogId !== id);
-    saveArticles(articles);
+    db.collection('blogs').doc(id).delete().catch(e => console.error('Firestore deleteBlog:', e));
+    // Supprimer aussi les articles liés
+    _cache.articles
+      .filter(a => a.blogId === id)
+      .forEach(a => db.collection('articles').doc(a.id).delete().catch(() => {}));
   }
 
-  /* ----------------------------------------------------------------------
-   * Articles : opérations métier
-   * -------------------------------------------------------------------- */
+  // ── Articles ───────────────────────────────────────────────────────────
+  function getArticles() { return [..._cache.articles]; }
 
   function getArticleById(id) {
-    return getArticles().find(a => a.id === id) || null;
+    return _cache.articles.find(a => a.id === id) || null;
   }
 
   function getArticlesByBlog(blogId) {
-    return getArticles().filter(a => a.blogId === blogId);
+    return _cache.articles.filter(a => a.blogId === blogId);
   }
 
   function createArticle({ blogId, titre, resume, contenu, auteur, statut, image, pieceJointes }) {
-    const articles = getArticles();
     const horodatage = now();
+    const id = generateId('art');
     const article = {
-      id: generateId('art'),
-      blogId,
+      id, blogId,
       titre: (titre || '').trim() || 'Article sans titre',
       resume: (resume || '').trim().slice(0, 250),
       contenu: contenu || '',
@@ -3981,27 +3741,25 @@ const Storage = (() => {
       dateModification: horodatage,
       statut: STATUTS.includes(statut) ? statut : 'Brouillon'
     };
-    articles.push(article);
-    saveArticles(articles);
+    db.collection('articles').doc(id).set(article).catch(e => {
+      console.error('Firestore createArticle:', e);
+      afficherBanniereKiosque("Erreur d'enregistrement. Vérifiez votre connexion.", '#8C2F39');
+    });
     return article;
   }
 
   function updateArticle(id, data) {
-    const articles = getArticles();
-    const idx = articles.findIndex(a => a.id === id);
-    if (idx === -1) return null;
-    const donneesNettoyees = { ...data };
-    if (typeof donneesNettoyees.resume === 'string') {
-      donneesNettoyees.resume = donneesNettoyees.resume.slice(0, 250);
-    }
-    articles[idx] = {
-      ...articles[idx],
-      ...donneesNettoyees,
-      id: articles[idx].id,
+    const article = _cache.articles.find(a => a.id === id);
+    if (!article) return null;
+    const cleaned = { ...data };
+    if (typeof cleaned.resume === 'string') cleaned.resume = cleaned.resume.slice(0, 250);
+    const updated = {
+      ...article, ...cleaned,
+      id: article.id,
       dateModification: now()
     };
-    saveArticles(articles);
-    return articles[idx];
+    db.collection('articles').doc(id).set(updated).catch(e => console.error('Firestore updateArticle:', e));
+    return updated;
   }
 
   function setArticleStatut(id, statut) {
@@ -4009,84 +3767,59 @@ const Storage = (() => {
     return updateArticle(id, { statut });
   }
 
-  /** Suppression définitive d'un article. */
   function deleteArticle(id) {
-    const articles = getArticles().filter(a => a.id !== id);
-    saveArticles(articles);
+    db.collection('articles').doc(id).delete().catch(e => console.error('Firestore deleteArticle:', e));
   }
 
-  /* ----------------------------------------------------------------------
-   * Comptes (utilisateurs) : opérations métier
-   * ----------------------------------------------------------------------
-   * Gestion complète des comptes de rédaction : créer, modifier, supprimer.
-   * Deux garde-fous métier sont appliqués :
-   *   - l'identifiant (username) doit être unique ;
-   *   - on ne peut jamais supprimer le dernier compte administrateur,
-   *     pour éviter de se retrouver enfermé hors de l'application.
-   * -------------------------------------------------------------------- */
-
-  const ROLES_UTILISATEUR = ['admin'];
+  // ── Utilisateurs ───────────────────────────────────────────────────────
+  function getUsers() { return [..._cache.users]; }
 
   function getUserById(id) {
-    return getUsers().find(u => u.id === id) || null;
+    return _cache.users.find(u => u.id === id) || null;
   }
 
   function trouverParIdentifiant(username) {
     const cible = String(username || '').trim().toLowerCase();
-    return getUsers().find(u => u.username.toLowerCase() === cible) || null;
+    return _cache.users.find(u => u.username.toLowerCase() === cible) || null;
   }
 
-  function nombreAdmins(utilisateurs = getUsers()) {
-    return utilisateurs.filter(u => u.role === 'admin').length;
+  function nombreAdmins(utilisateurs) {
+    return (utilisateurs || _cache.users).filter(u => u.role === 'admin').length;
   }
 
-  /**
-   * Crée un compte. Retourne { ok: true, user } en cas de succès,
-   * ou { ok: false, erreur } sinon (identifiant déjà pris, champs invalides).
-   */
   function createUser({ username, password, nom, role, ddn }) {
     const identifiant = String(username || '').trim();
     if (!identifiant) return { ok: false, erreur: "L'identifiant est obligatoire." };
     if (!password || password.length < 4) return { ok: false, erreur: 'Le mot de passe doit contenir au moins 4 caractères.' };
-    if (trouverParIdentifiant(identifiant)) return { ok: false, erreur: 'Cet identifiant est déjà utilisé par un autre compte.' };
-
-    const utilisateurs = getUsers();
-    const utilisateur = {
-      id: generateId('usr'),
-      username: identifiant,
+    if (trouverParIdentifiant(identifiant)) return { ok: false, erreur: 'Cet identifiant est déjà utilisé.' };
+    const id = generateId('usr');
+    const user = {
+      id, username: identifiant,
       password,
       nom: (nom || '').trim() || identifiant,
       role: ROLES_UTILISATEUR.includes(role) ? role : 'admin',
       ddn: ddn || ''
     };
-    utilisateurs.push(utilisateur);
-    write(KEYS.USERS, utilisateurs);
-    return { ok: true, user: utilisateur };
+    db.collection('users').doc(id).set(user).catch(e => console.error('Firestore createUser:', e));
+    return { ok: true, user };
   }
 
-  /**
-   * Modifie un compte existant. Le mot de passe n'est changé que si une
-   * nouvelle valeur non vide est fournie.
-   */
   function updateUser(id, { username, password, nom, role, ddn }) {
-    const utilisateurs = getUsers();
+    const utilisateurs = _cache.users;
     const idx = utilisateurs.findIndex(u => u.id === id);
     if (idx === -1) return { ok: false, erreur: 'Compte introuvable.' };
-
     const identifiant = String(username || '').trim();
     if (!identifiant) return { ok: false, erreur: "L'identifiant est obligatoire." };
-
     const doublon = trouverParIdentifiant(identifiant);
-    if (doublon && doublon.id !== id) return { ok: false, erreur: 'Cet identifiant est déjà utilisé par un autre compte.' };
-
+    if (doublon && doublon.id !== id) return { ok: false, erreur: 'Identifiant déjà utilisé.' };
     const nouveauRole = ROLES_UTILISATEUR.includes(role) ? role : utilisateurs[idx].role;
-
-    // Garde-fou : impossible de retirer le statut admin du dernier administrateur.
-    if (utilisateurs[idx].role === 'admin' && nouveauRole !== 'admin' && nombreAdmins(utilisateurs) <= 1) {
-      return { ok: false, erreur: "Impossible de retirer les droits du dernier compte administrateur." };
+    if (utilisateurs[idx].role === 'admin' && nouveauRole !== 'admin' && nombreAdmins() <= 1) {
+      return { ok: false, erreur: "Impossible de retirer les droits du dernier administrateur." };
     }
-
-    utilisateurs[idx] = {
+    if (password && password.length > 0 && password.length < 4) {
+      return { ok: false, erreur: 'Le mot de passe doit contenir au moins 4 caractères.' };
+    }
+    const updated = {
       ...utilisateurs[idx],
       username: identifiant,
       nom: (nom || '').trim() || identifiant,
@@ -4094,52 +3827,58 @@ const Storage = (() => {
       ddn: ddn !== undefined ? ddn : utilisateurs[idx].ddn,
       ...(password && password.length > 0 ? { password } : {})
     };
-
-    if (password && password.length > 0 && password.length < 4) {
-      return { ok: false, erreur: 'Le mot de passe doit contenir au moins 4 caractères.' };
-    }
-
-    write(KEYS.USERS, utilisateurs);
-
-    // Si le compte modifié est celui actuellement connecté, on met aussi à
-    // jour la session pour que le nom/rôle affichés restent cohérents.
+    db.collection('users').doc(id).set(updated).catch(e => console.error('Firestore updateUser:', e));
     const session = getSession();
     if (session && session.userId === id) {
-      setSession({ ...session, username: utilisateurs[idx].username, nom: utilisateurs[idx].nom, role: utilisateurs[idx].role });
+      setSession({ ...session, username: updated.username, nom: updated.nom, role: updated.role });
     }
-
-    return { ok: true, user: utilisateurs[idx] };
+    return { ok: true, user: updated };
   }
 
-  /**
-   * Supprime un compte. Refuse si c'est le dernier administrateur, ou si
-   * c'est le compte actuellement connecté (pour éviter de se déconnecter
-   * accidentellement soi-même).
-   */
   function deleteUser(id) {
-    const utilisateurs = getUsers();
-    const cible = utilisateurs.find(u => u.id === id);
+    const cible = _cache.users.find(u => u.id === id);
     if (!cible) return { ok: false, erreur: 'Compte introuvable.' };
-
     const session = getSession();
-    if (session && session.userId === id) {
-      return { ok: false, erreur: 'Impossible de supprimer le compte avec lequel vous êtes actuellement connecté.' };
-    }
-    if (cible.role === 'admin' && nombreAdmins(utilisateurs) <= 1) {
-      return { ok: false, erreur: 'Impossible de supprimer le dernier compte administrateur.' };
-    }
-
-    write(KEYS.USERS, utilisateurs.filter(u => u.id !== id));
+    if (session && session.userId === id) return { ok: false, erreur: 'Impossible de supprimer votre propre compte.' };
+    if (cible.role === 'admin' && nombreAdmins() <= 1) return { ok: false, erreur: 'Impossible de supprimer le dernier administrateur.' };
+    db.collection('users').doc(id).delete().catch(e => console.error('Firestore deleteUser:', e));
     return { ok: true };
   }
 
-  /* ----------------------------------------------------------------------
-   * Statistiques pour le tableau de bord
-   * -------------------------------------------------------------------- */
+  // ── Paramètres ─────────────────────────────────────────────────────────
+  function getSettings() {
+    return _cache.settings || {
+      siteName: 'Kiosque',
+      tagline: 'Le kiosque des publications du moment',
+      articlesParPage: 9,
+      copyright: '© ' + new Date().getFullYear() + ' Kiosque — Tous droits réservés.',
+      emailContact: '',
+      logoEmoji: '📰',
+      couleurPrincipale: '#0A3A8C',
+      couleurAccent: '#CC1533',
+      couleurFond: '#F0F4FF',
+      modeSombre: true,
+      ddnRequis: true,
+      modeMaintenance: false,
+      msgMaintenance: 'Le site est temporairement en maintenance. Revenez bientôt !',
+      ageMinimum: 0,
+      moderationAuto: false,
+      commentairesActifs: false,
+      statutDefaut: 'Brouillon',
+      auteurAffichage: 'nom',
+      mentionsLegales: '<h3>Éditeur du site</h3><p>Ce site est géré par l\'équipe de rédaction du Kiosque.</p>'
+    };
+  }
 
+  function saveSettings(settings) {
+    _cache.settings = settings;
+    db.doc('settings/global').set(settings).catch(e => console.error('Firestore saveSettings:', e));
+  }
+
+  // ── Statistiques ───────────────────────────────────────────────────────
   function getStats() {
-    const blogs = getBlogs();
-    const articles = getArticles();
+    const blogs = _cache.blogs;
+    const articles = _cache.articles;
     return {
       nbBlogs: blogs.length,
       nbArticles: articles.length,
@@ -4152,28 +3891,161 @@ const Storage = (() => {
     };
   }
 
-  /**
-   * Réinitialisation complète : efface les 5 clés de l'application et
-   * régénère les données de démonstration. Utile en cas de stockage
-   * pollué par un autre usage local, ou simplement pour repartir à zéro.
-   */
-  function reinitialiser() {
-    [KEYS.BLOGS, KEYS.ARTICLES, KEYS.USERS, KEYS.SESSION, KEYS.SETTINGS].forEach(cle => {
-      try { zoneStockage.removeItem(cle); } catch { /* on ignore, seedIfEmpty corrigera de toute façon */ }
-    });
-    seedIfEmpty();
+  // ── Sauvegarde des blogs/articles (compat ancien code) ─────────────────
+  function saveBlogs(list) {
+    const batch = db.batch();
+    list.forEach(b => batch.set(db.collection('blogs').doc(b.id), b));
+    batch.commit().catch(e => console.error('Firestore saveBlogs:', e));
   }
 
-  // Initialise les données par défaut dès le chargement du module.
+  function saveArticles(list) {
+    const batch = db.batch();
+    list.forEach(a => batch.set(db.collection('articles').doc(a.id), a));
+    batch.commit().catch(e => console.error('Firestore saveArticles:', e));
+  }
+
+  // ── Réinitialisation ───────────────────────────────────────────────────
+  async function reinitialiser() {
+    // Supprimer toutes les données existantes
+    const [blogsSnap, articlesSnap, usersSnap] = await Promise.all([
+      db.collection('blogs').get(),
+      db.collection('articles').get(),
+      db.collection('users').get()
+    ]);
+    const batch = db.batch();
+    [...blogsSnap.docs, ...articlesSnap.docs, ...usersSnap.docs].forEach(d => batch.delete(d.ref));
+
+    // Données par défaut
+    const adminId = generateId('usr');
+    const blogUrbanId = generateId('blg');
+    const horodatage = now();
+
+    batch.set(db.collection('users').doc(adminId), {
+      id: adminId, username: 'admin', password: 'admin123',
+      nom: 'Administrateur', role: 'admin', ddn: '1990-01-01'
+    });
+
+    batch.set(db.doc('settings/global'), {
+      siteName: 'Kiosque',
+      tagline: 'Le kiosque des publications du moment',
+      articlesParPage: 9,
+      copyright: '© ' + new Date().getFullYear() + ' Kiosque — Tous droits réservés.',
+      emailContact: '', logoEmoji: '📰',
+      couleurPrincipale: '#0A3A8C', couleurAccent: '#CC1533', couleurFond: '#F0F4FF',
+      modeSombre: true, ddnRequis: true, modeMaintenance: false,
+      msgMaintenance: 'Le site est temporairement en maintenance.',
+      ageMinimum: 0, moderationAuto: false, commentairesActifs: false,
+      statutDefaut: 'Brouillon', auteurAffichage: 'nom',
+      mentionsLegales: '<h3>Éditeur du site</h3><p>Ce site est géré par l\'équipe de rédaction du Kiosque.</p>'
+    });
+
+    batch.set(db.collection('blogs').doc(blogUrbanId), {
+      id: blogUrbanId, titre: 'Chroniques Urbaines',
+      description: 'Les transformations de nos villes, racontées au fil des rues.',
+      dateCreation: horodatage
+    });
+
+    const artId = generateId('art');
+    batch.set(db.collection('articles').doc(artId), {
+      id: artId, blogId: blogUrbanId,
+      titre: 'La renaissance des friches industrielles',
+      resume: 'Comment les anciennes usines deviennent des lieux de vie créatifs.',
+      contenu: '<p>De nombreuses villes françaises réinventent leurs friches industrielles en tiers-lieux culturels.</p>',
+      image: null, pieceJointes: [], auteur: 'Administrateur',
+      dateCreation: horodatage, dateModification: horodatage, statut: 'En ligne'
+    });
+
+    await batch.commit();
+  }
+
+  // ── Initialisation : si Firestore est vide, créer les données par défaut ─
+  async function seedIfEmpty() {
+    try {
+      const [usersSnap, settingsSnap] = await Promise.all([
+        db.collection('users').limit(1).get(),
+        db.doc('settings/global').get()
+      ]);
+
+      const batch = db.batch();
+      let needsWrite = false;
+
+      if (usersSnap.empty) {
+        needsWrite = true;
+        const adminId = generateId('usr');
+        batch.set(db.collection('users').doc(adminId), {
+          id: adminId, username: 'admin', password: 'admin123',
+          nom: 'Administrateur', role: 'admin', ddn: '1990-01-01'
+        });
+      }
+
+      if (!settingsSnap.exists) {
+        needsWrite = true;
+        batch.set(db.doc('settings/global'), {
+          siteName: 'Kiosque',
+          tagline: 'Le kiosque des publications du moment',
+          articlesParPage: 9,
+          copyright: '© ' + new Date().getFullYear() + ' Kiosque — Tous droits réservés.',
+          emailContact: '', logoEmoji: '📰',
+          couleurPrincipale: '#0A3A8C', couleurAccent: '#CC1533', couleurFond: '#F0F4FF',
+          modeSombre: true, ddnRequis: true, modeMaintenance: false,
+          msgMaintenance: 'Le site est temporairement en maintenance. Revenez bientôt !',
+          ageMinimum: 0, moderationAuto: false, commentairesActifs: false,
+          statutDefaut: 'Brouillon', auteurAffichage: 'nom',
+          mentionsLegales: '<h3>Éditeur du site</h3><p>Ce site est géré par l\'équipe de rédaction du Kiosque.</p>'
+        });
+      }
+
+      if (needsWrite) await batch.commit();
+
+      // Blogs de démo si la base est vide
+      const blogsSnap = await db.collection('blogs').limit(1).get();
+      if (blogsSnap.empty) {
+        const horodatage = now();
+        const batchDemo = db.batch();
+
+        const b1 = generateId('blg'), b2 = generateId('blg'), b3 = generateId('blg');
+        batchDemo.set(db.collection('blogs').doc(b1), { id: b1, titre: 'Chroniques Urbaines', description: 'Les transformations de nos villes.', dateCreation: horodatage });
+        batchDemo.set(db.collection('blogs').doc(b2), { id: b2, titre: 'Carnets de Voyage', description: 'Récits pour explorer le monde sans filtre.', dateCreation: horodatage });
+        batchDemo.set(db.collection('blogs').doc(b3), { id: b3, titre: 'Labo Numérique', description: 'Technologie et usages du web décryptés.', dateCreation: horodatage });
+
+        const a1 = generateId('art');
+        batchDemo.set(db.collection('articles').doc(a1), {
+          id: a1, blogId: b1, titre: 'La renaissance des friches industrielles',
+          resume: 'Comment les anciennes usines deviennent des lieux de vie créatifs.',
+          contenu: '<p>De nombreuses villes françaises réinventent leurs friches industrielles en tiers-lieux culturels.</p>',
+          image: null, pieceJointes: [], auteur: 'Administrateur',
+          dateCreation: horodatage, dateModification: horodatage, statut: 'En ligne'
+        });
+        const a2 = generateId('art');
+        batchDemo.set(db.collection('articles').doc(a2), {
+          id: a2, blogId: b2, titre: 'Trois semaines sur la route des Balkans',
+          resume: 'Itinéraire complet, budget et anecdotes de route.',
+          contenu: '<p>Des plages de Croatie aux montagnes d\'Albanie.</p>',
+          image: null, pieceJointes: [], auteur: 'Administrateur',
+          dateCreation: horodatage, dateModification: horodatage, statut: 'En ligne'
+        });
+        const a3 = generateId('art');
+        batchDemo.set(db.collection('articles').doc(a3), {
+          id: a3, blogId: b3, titre: 'Comprendre le Firestore en 5 minutes',
+          resume: 'Un tour d\'horizon simple du stockage cloud temps réel.',
+          contenu: '<p>Firestore permet de synchroniser des données entre appareils instantanément.</p>',
+          image: null, pieceJointes: [], auteur: 'Administrateur',
+          dateCreation: horodatage, dateModification: horodatage, statut: 'En ligne'
+        });
+
+        await batchDemo.commit();
+      }
+    } catch(e) {
+      console.warn('seedIfEmpty error:', e);
+    }
+  }
+
+  // Lancer l'initialisation au démarrage
   seedIfEmpty();
 
-  // API publique du module.
   return {
-    KEYS,
-    STATUTS,
-    ROLES_UTILISATEUR,
-    generateId,
-    now,
+    KEYS, STATUTS, ROLES_UTILISATEUR,
+    generateId, now,
     getBlogs, saveBlogs, getBlogById, createBlog, updateBlog, deleteBlog,
     getArticles, saveArticles, getArticleById, getArticlesByBlog,
     createArticle, updateArticle, setArticleStatut, deleteArticle,
@@ -4185,16 +4057,18 @@ const Storage = (() => {
   };
 })();
 
-/**
- * Si le LocalStorage s'est révélé indisponible, on informe la personne
- * discrètement plutôt que de laisser l'application sembler "ne rien
- * faire" sans explication.
- */
-if (!stockagePersistant) {
-  afficherBanniereKiosque(
-    "Stockage local indisponible dans cet environnement : l'application fonctionne, mais vos données ne seront pas conservées après la fermeture de cet onglet.",
-    '#1B2A41'
-  );
+// stockagePersistant = true (Firestore est toujours disponible si en ligne)
+const stockagePersistant = true;
+// zoneStockage n'est plus utilisé directement mais on le garde pour compat autosave
+let zoneStockage;
+try {
+  const t = '__kiosque_test__';
+  localStorage.setItem(t, '1');
+  localStorage.removeItem(t);
+  zoneStockage = localStorage;
+} catch(e) {
+  const m = new Map();
+  zoneStockage = { getItem: k => m.get(k)||null, setItem: (k,v) => m.set(k,String(v)), removeItem: k => m.delete(k) };
 }
 
 </script>
@@ -5877,39 +5751,6 @@ document.getElementById('form-connexion').addEventListener('submit', (evenement)
   }
 
   /* ======================================================================
-   * SYNCHRONISATION INTER-ONGLETS (storage event)
-   * ----------------------------------------------------------------------
-   * Le navigateur émet un événement "storage" sur TOUS les onglets ouverts
-   * sauf celui qui a effectué la modification. On l'utilise pour rafraîchir
-   * l'interface automatiquement quand un autre onglet change les données.
-   * ===================================================================== */
-  window.addEventListener('storage', (evenement) => {
-    // On ne réagit qu'aux clés de l'application Kiosque.
-    const clesSuivies = Object.values(Storage.KEYS);
-    if (!clesSuivies.includes(evenement.key)) return;
-
-    // Si la session a changé dans un autre onglet (connexion / déconnexion),
-    // on redirige vers la bonne page plutôt que de rester sur une page incohérente.
-    if (evenement.key === Storage.KEYS.SESSION) {
-      const sessionActive = Auth.isLoggedIn();
-      const surPageAdmin = document.querySelector('[data-page="admin"]')?.classList.contains('page-actif');
-      if (!sessionActive && surPageAdmin) {
-        window.location.hash = '#/login';
-      } else if (sessionActive && document.querySelector('[data-page="login"]')?.classList.contains('page-actif')) {
-        window.location.hash = '#/admin';
-      }
-      return;
-    }
-
-    // Pour les données (blogs, articles, paramètres, utilisateurs), on
-    // rafraîchit simplement la vue courante sans recharger la page.
-    if (evenement.key === Storage.KEYS.SETTINGS) {
-      appliquerParametresSite();
-    }
-    rafraichirTout();
-  });
-
-  /* ======================================================================
    * PARAMÈTRES — vue réservée aux admins
    * ==================================================================== */
 
@@ -6249,26 +6090,6 @@ function router() {
 
 window.addEventListener('hashchange', router);
 router();
-
-/* ------------------------------------------------------------------
- * SYNCHRONISATION INTER-ONGLETS — pages publiques
- * Quand un autre onglet (ex : l'admin) modifie les données, on
- * rafraîchit automatiquement la page publique affichée.
- * ------------------------------------------------------------------ */
-window.addEventListener('storage', (evenement) => {
-  const clesSuivies = ['blogs', 'articles', 'settings'];
-  if (!clesSuivies.includes(evenement.key)) return;
-
-  const { chemin, params } = analyserHash();
-
-  if (chemin === 'accueil') {
-    prepareAccueilPage();
-    if (evenement.key === 'settings') appliquerParametresSite();
-  } else if (chemin === 'blog') {
-    prepareBlogPage(params.get('id'));
-    if (evenement.key === 'settings') appliquerParametresSite();
-  }
-});
 
 </script>
 
