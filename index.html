@@ -3603,46 +3603,7 @@ window.addEventListener('error', (ev) => {
   );
 });
 
-// ── Fonction appelée par les listeners Firestore pour rafraîchir l'UI ──
-function _onDataChange(source) {
-  // On rafraîchit la vue courante selon la page active
-  try {
-    const hash = window.location.hash.replace(/^#\/?/, '').split('?')[0] || 'accueil';
-
-    if (hash === 'accueil' && typeof prepareAccueilPage === 'function') {
-      prepareAccueilPage();
-      if (source === 'settings' && typeof appliquerParametresSite === 'function') appliquerParametresSite();
-    } else if (hash === 'blog' && typeof afficherArticlesBlog === 'function') {
-      afficherArticlesBlog();
-      if (source === 'settings' && typeof appliquerParametresSite === 'function') appliquerParametresSite();
-    } else if (hash === 'admin' && typeof rafraichirTout === 'function') {
-      rafraichirTout();
-      if (source === 'settings' && typeof appliquerParametresSite === 'function') appliquerParametresSite();
-    }
-  } catch(e) { /* rafraîchissement non encore disponible au démarrage */ }
-}
-
-// ── Listeners temps réel Firestore (onSnapshot) ────────────────────────
-db.collection('blogs').onSnapshot(snap => {
-  _cache.blogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  _onDataChange('blogs');
-}, err => console.warn('Firestore blogs:', err));
-
-db.collection('articles').onSnapshot(snap => {
-  _cache.articles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  _onDataChange('articles');
-}, err => console.warn('Firestore articles:', err));
-
-db.collection('users').onSnapshot(snap => {
-  _cache.users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}, err => console.warn('Firestore users:', err));
-
-db.doc('settings/global').onSnapshot(snap => {
-  if (snap.exists) {
-    _cache.settings = snap.data();
-    _onDataChange('settings');
-  }
-}, err => console.warn('Firestore settings:', err));
+// Les listeners onSnapshot sont gérés dans demarrerQuandPret()
 
 // ── Module Storage (API identique à l'ancienne version localStorage) ───
 const Storage = (() => {
@@ -6089,7 +6050,105 @@ function router() {
 }
 
 window.addEventListener('hashchange', router);
-router();
+
+/* ------------------------------------------------------------------
+ * Attendre que Firestore ait chargé les données avant de lancer le
+ * routeur. On attend que les 3 collections principales (blogs,
+ * articles, users) aient reçu leur premier snapshot.
+ * ------------------------------------------------------------------ */
+(function demarrerQuandPret() {
+  // Afficher un écran de chargement pendant la connexion à Firestore
+  const ecran = document.createElement('div');
+  ecran.id = 'ecran-chargement';
+  ecran.style.cssText = [
+    'position:fixed', 'inset:0', 'z-index:9000',
+    'background:var(--paper)', 'display:flex',
+    'flex-direction:column', 'align-items:center',
+    'justify-content:center', 'gap:16px',
+    'font-family:var(--font-body)', 'color:var(--ink)'
+  ].join(';');
+  ecran.innerHTML = `
+    <div style="font-size:2.5rem">📰</div>
+    <div style="font-weight:600;font-size:1.1rem">Chargement du Kiosque…</div>
+    <div style="font-size:0.85rem;color:var(--ink-faint)">Connexion à la base de données</div>
+    <div style="width:180px;height:4px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px">
+      <div id="barre-chargement" style="height:100%;width:0%;background:var(--ink);border-radius:99px;transition:width 0.4s ease"></div>
+    </div>
+  `;
+  document.body.appendChild(ecran);
+
+  let blogsReady = false, articlesReady = false, usersReady = false;
+  let routerLance = false;
+
+  function majBarre() {
+    const pct = ([blogsReady, articlesReady, usersReady].filter(Boolean).length / 3) * 100;
+    const barre = document.getElementById('barre-chargement');
+    if (barre) barre.style.width = pct + '%';
+  }
+
+  function verifierPret() {
+    majBarre();
+    if (blogsReady && articlesReady && usersReady && !routerLance) {
+      routerLance = true;
+      setTimeout(() => {
+        ecran.remove();
+        router();
+      }, 150); // légère pause pour que la barre atteigne 100%
+    }
+  }
+
+  // Écouter les premiers snapshots de chaque collection
+  const db = firebase.firestore();
+
+  const unsubBlogs = db.collection('blogs').onSnapshot(snap => {
+    _cache.blogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!blogsReady) { blogsReady = true; verifierPret(); }
+    else if (routerLance && typeof rafraichirTout === 'function') {
+      try { rafraichirTout(); if (typeof prepareAccueilPage === 'function') prepareAccueilPage(); } catch(e) {}
+    }
+  });
+
+  const unsubArticles = db.collection('articles').onSnapshot(snap => {
+    _cache.articles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!articlesReady) { articlesReady = true; verifierPret(); }
+    else if (routerLance && typeof rafraichirTout === 'function') {
+      try { rafraichirTout(); if (typeof prepareAccueilPage === 'function') prepareAccueilPage(); } catch(e) {}
+    }
+  });
+
+  const unsubUsers = db.collection('users').onSnapshot(snap => {
+    _cache.users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!usersReady) { usersReady = true; verifierPret(); }
+    else if (routerLance && typeof rafraichirVueComptes === 'function') {
+      try { rafraichirVueComptes(); } catch(e) {}
+    }
+  });
+
+  db.doc('settings/global').onSnapshot(snap => {
+    if (snap.exists) {
+      _cache.settings = snap.data();
+      if (routerLance && typeof appliquerParametresSite === 'function') {
+        try { appliquerParametresSite(); } catch(e) {}
+      }
+    }
+  });
+
+  // Timeout de sécurité : si Firestore met trop de temps (pas de réseau),
+  // on lance quand même le routeur avec le cache vide
+  setTimeout(() => {
+    if (!routerLance) {
+      routerLance = true;
+      ecran.innerHTML = `
+        <div style="font-size:2rem">⚠️</div>
+        <div style="font-weight:600">Connexion lente ou hors ligne</div>
+        <div style="font-size:0.82rem;color:var(--ink-faint);max-width:280px;text-align:center">
+          Les données ne sont peut-être pas à jour. Vérifiez votre connexion internet.
+        </div>
+      `;
+      setTimeout(() => { ecran.remove(); router(); }, 2000);
+    }
+  }, 8000);
+})();
 
 </script>
 
