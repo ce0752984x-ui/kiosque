@@ -6065,8 +6065,65 @@ window.addEventListener('hashchange', router);
  * routeur. On attend que les 3 collections principales (blogs,
  * articles, users) aient reçu leur premier snapshot.
  * ------------------------------------------------------------------ */
+/* ======================================================================
+ * SYSTÈME DE NOTIFICATIONS — Kiosque
+ * Notifications système natives via Service Worker + Notification API.
+ * Déclenchées par onSnapshot Firestore quand un article ou blog change.
+ * ===================================================================== */
+const Notifs = (() => {
+  const VAPID = 'BCeRH4bGsYBdmg0Y8z0wNak1cg4dh2t8RkfCmIcEJo7iN-yGGnbKESuRZbg19O30nqeZpais1ANpZeZ20N6PTJE';
+  let permission = Notification.permission;
+  let swRegistration = null;
+
+  // Demander la permission et enregistrer le SW
+  async function initialiser() {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
+    // Enregistrer le SW
+    try {
+      swRegistration = await navigator.serviceWorker.register('/kiosque/sw.js');
+      await navigator.serviceWorker.ready;
+    } catch(e) {
+      console.warn('SW non disponible:', e);
+      return;
+    }
+
+    // Demander la permission si pas encore fait
+    if (permission === 'default') {
+      // Attendre que l'utilisateur ait interagi avec la page
+      const demander = async () => {
+        permission = await Notification.requestPermission();
+        document.removeEventListener('click', demander);
+      };
+      document.addEventListener('click', demander, { once: true });
+    }
+  }
+
+  // Envoyer une notification via le Service Worker (vraie notif système)
+  async function envoyer({ titre, corps, icone, url }) {
+    if (permission !== 'granted') return;
+    if (!swRegistration) return;
+
+    const reg = await navigator.serviceWorker.ready;
+    reg.showNotification(titre, {
+      body: corps,
+      icon: icone || "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230A3A8C'/><text y='46' x='32' font-size='36' text-anchor='middle'>📰</text></svg>",
+      badge: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230A3A8C'/><text y='46' x='32' font-size='36' text-anchor='middle'>📰</text></svg>",
+      tag: url || 'kiosque',
+      renotify: true,
+      data: { url: url || '/kiosque/' },
+      vibrate: [200, 100, 200]
+    });
+  }
+
+  return { initialiser, envoyer, get permission() { return permission; } };
+})();
+
+/* ======================================================================
+ * DÉMARRAGE — Attend Firestore puis lance le routeur + notifications
+ * ===================================================================== */
 (function demarrerQuandPret() {
-  // Afficher un écran de chargement pendant la connexion à Firestore
+  // Écran de chargement
   const ecran = document.createElement('div');
   ecran.id = 'ecran-chargement';
   ecran.style.cssText = [
@@ -6089,6 +6146,9 @@ window.addEventListener('hashchange', router);
   let blogsReady = false, articlesReady = false, usersReady = false;
   let routerLance = false;
 
+  // Snapshots précédents pour détecter les changements (pas les chargements initiaux)
+  const precedent = { blogs: null, articles: null };
+
   function majBarre() {
     const pct = ([blogsReady, articlesReady, usersReady].filter(Boolean).length / 3) * 100;
     const barre = document.getElementById('barre-chargement');
@@ -6102,33 +6162,108 @@ window.addEventListener('hashchange', router);
       setTimeout(() => {
         ecran.remove();
         router();
-      }, 150); // légère pause pour que la barre atteigne 100%
+        // Initialiser les notifications après le premier clic utilisateur
+        Notifs.initialiser();
+      }, 150);
     }
   }
 
-  // Écouter les premiers snapshots de chaque collection
+  // ── Détection des changements pour les notifications ──────────────────
+  function detecterChangementsBlogs(snap) {
+    if (!routerLance || precedent.blogs === null) {
+      precedent.blogs = snap.docs.map(d => d.id).join(',');
+      return;
+    }
+    const ancienIds = precedent.blogs;
+    const nouveauxIds = snap.docs.map(d => d.id).join(',');
+
+    snap.docChanges().forEach(change => {
+      const blog = { id: change.doc.id, ...change.doc.data() };
+      if (change.type === 'added' && ancienIds !== '') {
+        // Nouvelle publication créée
+        Notifs.envoyer({
+          titre: '📰 Nouvelle publication créée',
+          corps: `"${blog.titre}" vient d'être ajoutée au Kiosque.`,
+          url: '/kiosque/'
+        });
+      }
+    });
+    precedent.blogs = nouveauxIds;
+  }
+
+  function detecterChangementsArticles(snap) {
+    if (!routerLance || precedent.articles === null) {
+      // Mémoriser l'état initial (statuts) pour comparer ensuite
+      precedent.articles = {};
+      snap.docs.forEach(d => {
+        precedent.articles[d.id] = { statut: d.data().statut, titre: d.data().titre };
+      });
+      return;
+    }
+
+    snap.docChanges().forEach(change => {
+      const art = { id: change.doc.id, ...change.doc.data() };
+
+      if (change.type === 'added') {
+        // Nouvel article créé
+        Notifs.envoyer({
+          titre: '✏️ Nouvel article créé',
+          corps: `"${art.titre}" a été ajouté dans le Kiosque.`,
+          url: '/kiosque/'
+        });
+        precedent.articles[art.id] = { statut: art.statut, titre: art.titre };
+
+      } else if (change.type === 'modified') {
+        const ancien = precedent.articles[art.id];
+
+        if (ancien && ancien.statut !== 'En ligne' && art.statut === 'En ligne') {
+          // Article passé En ligne
+          Notifs.envoyer({
+            titre: '🟢 Article publié',
+            corps: `"${art.titre}" est maintenant en ligne sur le Kiosque !`,
+            url: '/kiosque/'
+          });
+        } else if (ancien) {
+          // Article modifié (autre changement)
+          Notifs.envoyer({
+            titre: '📝 Article modifié',
+            corps: `"${art.titre}" vient d'être mis à jour.`,
+            url: '/kiosque/'
+          });
+        }
+        precedent.articles[art.id] = { statut: art.statut, titre: art.titre };
+
+      } else if (change.type === 'removed') {
+        delete precedent.articles[art.id];
+      }
+    });
+  }
+
+  // ── Listeners Firestore ───────────────────────────────────────────────
   const db = firebase.firestore();
 
-  const unsubBlogs = db.collection('blogs').onSnapshot(snap => {
+  db.collection('blogs').onSnapshot(snap => {
     _cache.blogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    detecterChangementsBlogs(snap);
     if (!blogsReady) { blogsReady = true; verifierPret(); }
-    else if (routerLance && typeof rafraichirTout === 'function') {
+    else if (routerLance) {
       try { rafraichirTout(); if (typeof prepareAccueilPage === 'function') prepareAccueilPage(); } catch(e) {}
     }
   });
 
-  const unsubArticles = db.collection('articles').onSnapshot(snap => {
+  db.collection('articles').onSnapshot(snap => {
     _cache.articles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    detecterChangementsArticles(snap);
     if (!articlesReady) { articlesReady = true; verifierPret(); }
-    else if (routerLance && typeof rafraichirTout === 'function') {
+    else if (routerLance) {
       try { rafraichirTout(); if (typeof prepareAccueilPage === 'function') prepareAccueilPage(); } catch(e) {}
     }
   });
 
-  const unsubUsers = db.collection('users').onSnapshot(snap => {
+  db.collection('users').onSnapshot(snap => {
     _cache.users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (!usersReady) { usersReady = true; verifierPret(); }
-    else if (routerLance && typeof rafraichirVueComptes === 'function') {
+    else if (routerLance) {
       try { rafraichirVueComptes(); } catch(e) {}
     }
   });
@@ -6136,14 +6271,13 @@ window.addEventListener('hashchange', router);
   db.doc('settings/global').onSnapshot(snap => {
     if (snap.exists) {
       _cache.settings = snap.data();
-      if (routerLance && typeof appliquerParametresSite === 'function') {
+      if (routerLance) {
         try { appliquerParametresSite(); } catch(e) {}
       }
     }
   });
 
-  // Timeout de sécurité : si Firestore met trop de temps (pas de réseau),
-  // on lance quand même le routeur avec le cache vide
+  // Timeout de sécurité
   setTimeout(() => {
     if (!routerLance) {
       routerLance = true;
