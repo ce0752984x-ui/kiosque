@@ -4132,10 +4132,19 @@ function echapper(texte) {
 
 /* ===== PAGE ACCUEIL + PAGE PUBLICATION D'UNE PUBLICATION (blog.js, adapté SPA) ===== */
 
-/** Date longue façon presse : « 14 mars 2026 » (pages publiques). */
+/** Date longue façon presse : « lundi 23 juin 2026 à 14h12 » */
 function formaterDateLongue(dateIso) {
   try {
-    return new Date(dateIso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const d = new Date(dateIso);
+    const datePartie = d.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${datePartie} à ${h}h${m}`;
   } catch {
     return '';
   }
@@ -4560,14 +4569,21 @@ document.getElementById('form-connexion').addEventListener('submit', (evenement)
    * ==================================================================== */
 
   function formaterDateCourte(dateIso) {
-    try {
-      return new Date(dateIso).toLocaleDateString('fr-FR', {
-        day: '2-digit', month: '2-digit', year: 'numeric'
-      });
-    } catch {
-      return '—';
-    }
+  try {
+    const d = new Date(dateIso);
+    const datePartie = d.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${datePartie} à ${h}h${m}`;
+  } catch {
+    return '—';
   }
+}
 
   /** Formate une taille en octets en Ko/Mo lisibles. */
   function formaterTaille(octets) {
