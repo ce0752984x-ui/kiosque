@@ -4248,8 +4248,8 @@ function afficherArticlesBlog() {
           <h3 class="titre-item-editorial">${echapper(article.titre)}</h3>
           <span class="tampon" data-statut="${echapper(article.statut)}">${echapper(article.statut)}</span>
         </div>
-        <div class="meta-item-editorial">
-          <span>Par ${echapper(article.auteur)} — le ${formaterDateLongue(article.dateCreation)}</span>
+       <div class="meta-item-editorial">
+          <span>Par ${echapper(article.auteur)} — Publié le ${formaterDateLongue(article.dateCreation)} · Mis à jour le ${formaterDateLongue(article.dateModification)}</span>
           ${pieces.length > 0 ? `<span class="trombone">📎 ${pieces.length} pièce${pieces.length > 1 ? 's' : ''} jointe${pieces.length > 1 ? 's' : ''}</span>` : ''}
         </div>
         <div class="corps-item-editorial">
