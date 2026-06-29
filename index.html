@@ -4251,6 +4251,10 @@ function afficherArticlesBlog() {
         <div class="meta-item-editorial">
           <span>Par ${echapper(article.auteur)}</span>
           <span>${formaterDateLongue(article.dateModification)}</span>
+		  <span>Par ${echapper(article.auteur)}</span>
+          <span>Publié le ${formaterDateLongue(article.dateCreation)}</span>
+          <span>Mis à jour le ${formaterDateLongue(article.dateModification)}</span>
+		  <span>Mis à jour le ${formaterDateLongue(article.dateModification)}</span>
           ${pieces.length > 0 ? `<span class="trombone">📎 ${pieces.length} pièce${pieces.length > 1 ? 's' : ''} jointe${pieces.length > 1 ? 's' : ''}</span>` : ''}
         </div>
         <div class="corps-item-editorial">
@@ -4957,8 +4961,6 @@ document.getElementById('form-connexion').addEventListener('submit', (evenement)
             </select>
             <div class="actions-cellule">
               <button type="button" class="btn btn-fantome btn-petit" data-modifier-article="${article.id}">Modifier</button>
-              <button type="button" class="btn btn-fantome btn-petit" data-dupliquer-article="${article.id}">Copier</button>
-              <button type="button" class="btn btn-fantome btn-petit" data-deplacer-article="${article.id}">Déplacer</button>
               <button type="button" class="btn btn-danger btn-petit" data-supprimer-article="${article.id}">Supprimer</button>
             </div>
           </div>
@@ -5112,8 +5114,10 @@ document.getElementById('form-connexion').addEventListener('submit', (evenement)
     refs.detailTitre.textContent = article.titre;
     refs.detailTampon.textContent = article.statut;
     refs.detailTampon.dataset.statut = article.statut;
-    refs.detailMeta.textContent =
-      `${blog ? blog.titre : 'Publication supprimée'} · Par ${article.auteur} · Créé le ${formaterDateCourte(article.dateCreation)} · Mis à jour le ${formaterDateCourte(article.dateModification)}`;
+    refs.detailMeta.innerHTML =
+  `${blog ? echapper(blog.titre) : 'Publication supprimée'} · Par ${echapper(article.auteur)}<br>
+   <span>Créé le ${formaterDateCourte(article.dateCreation)}</span><br>
+   <span>Mis à jour le ${formaterDateCourte(article.dateModification)}</span>`;
 
     if (article.image) {
       refs.detailIllustration.hidden = false;
