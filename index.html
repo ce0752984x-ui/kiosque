@@ -4249,9 +4249,7 @@ function afficherArticlesBlog() {
           <span class="tampon" data-statut="${echapper(article.statut)}">${echapper(article.statut)}</span>
         </div>
         <div class="meta-item-editorial">
-          <span>Par ${echapper(article.auteur)}</span>
-            <span>Publié le ${formaterDateCourte(article.dateCreation)}</span>
-            <span>Mis à jour le ${formaterDateCourte(article.dateModification)}</span>
+          <span>Par ${echapper(article.auteur)} — le ${formaterDateLongue(article.dateCreation)}</span>
           ${pieces.length > 0 ? `<span class="trombone">📎 ${pieces.length} pièce${pieces.length > 1 ? 's' : ''} jointe${pieces.length > 1 ? 's' : ''}</span>` : ''}
         </div>
         <div class="corps-item-editorial">
