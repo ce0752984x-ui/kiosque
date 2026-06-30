@@ -3319,12 +3319,7 @@ table.table-donnees tbody tr:hover { background: rgba(27, 42, 65, 0.035); }
             <input type="text" id="champ-titre" required placeholder="Titre de l'article">
           </div>
 
-          <div class="champ">
-            <label for="champ-resume">Résumé</label>
-            <textarea id="champ-resume" rows="3" maxlength="250" placeholder="Résumé court, affiché dans les listes"></textarea>
-            <p class="compteur-caracteres" id="compteur-resume">0 / 250 caractères</p>
-          </div>
-        </div>
+          
 
         <!-- Illustration -->
         <div class="section-editeur">
@@ -3542,7 +3537,44 @@ table.table-donnees tbody tr:hover { background: rgba(27, 42, 65, 0.035); }
     </div>
   </footer>
 
-  
+</div>
+
+<div class="page" data-page="article" id="page-article">
+  <main>
+    <div class="entete-blog" style="padding-bottom:var(--sp-4);">
+      <div class="conteneur">
+        <p class="fil-ariane">
+          <a href="#/">Accueil</a> /
+          <a href="#/" id="fil-lien-blog-article">Publication</a> /
+          <span id="fil-titre-article">Article</span>
+        </p>
+      </div>
+    </div>
+    <div class="conteneur" style="padding-top:var(--sp-6);padding-bottom:var(--sp-8);">
+      <div style="max-width:760px;margin:0 auto;">
+        <article class="carte-detail-article" id="article-carte-detail">
+          <div class="entete-detail-article">
+            <h1 id="article-detail-titre"></h1>
+            <span class="tampon" id="article-detail-tampon" data-statut=""></span>
+          </div>
+          <p class="meta-detail-article" id="article-detail-meta"></p>
+          <div class="detail-illustration" id="article-detail-illustration" hidden>
+            <img id="article-detail-illustration-img" src="" alt="">
+          </div>
+          <div class="detail-contenu" id="article-detail-contenu"></div>
+          <div class="pieces-item" id="article-detail-pieces"></div>
+          <div style="margin-top:var(--sp-6);padding-top:var(--sp-4);border-top:1px solid var(--line);">
+            <a class="btn btn-fantome" id="article-detail-retour" href="#/">← Retour à la publication</a>
+          </div>
+        </article>
+        <div class="etat-vide" id="article-introuvable" hidden>
+          <h3>Article introuvable</h3>
+          <p>Cet article n'existe pas, a été supprimé, ou n'est plus disponible.</p>
+          <p style="margin-top:var(--sp-4);"><a href="#/">← Retour à l'accueil</a></p>
+        </div>
+      </div>
+    </div>
+  </main>
 </div>
 
 <script>
@@ -4245,7 +4277,7 @@ function afficherArticlesBlog() {
     return `
       <article class="item-editorial">
         <div class="entete-item">
-          <h3 class="titre-item-editorial">${echapper(article.titre)}</h3>
+          <h3 class="titre-item-editorial"><a href="#/article?id=${encodeURIComponent(article.id)}">${echapper(article.titre)}</a></h3>
           <span class="tampon" data-statut="${echapper(article.statut)}">${echapper(article.statut)}</span>
         </div>
 		<div class="meta-item-editorial">
@@ -4508,9 +4540,7 @@ document.getElementById('form-connexion').addEventListener('submit', (evenement)
     articleId: document.getElementById('article-id'),
     articleBlog: document.getElementById('article-blog'),
     articleAuteurAffiche: document.getElementById('article-auteur-affiche'),
-    champTitre: document.getElementById('champ-titre'),
-    champResume: document.getElementById('champ-resume'),
-    compteurResume: document.getElementById('compteur-resume'),
+   champTitre: document.getElementById('champ-titre'),
     indicateurSauvegarde: document.getElementById('indicateur-sauvegarde'),
     btnSupprimerArticle: document.getElementById('btn-supprimer-article'),
     btnEnregistrerBrouillon: document.getElementById('btn-enregistrer-brouillon'),
@@ -5410,11 +5440,7 @@ document.getElementById('form-connexion').addEventListener('submit', (evenement)
     if (blogIdSelectionne) refs.articleBlog.value = blogIdSelectionne;
   }
 
-  function rafraichirCompteurResume() {
-    const longueur = refs.champResume.value.length;
-    refs.compteurResume.textContent = `${longueur} / 250 caractères`;
-    refs.compteurResume.classList.toggle('alerte', longueur >= 250);
-  }
+ 
 
   function viderFormulaireEditeur() {
     refs.formEditeur.reset();
@@ -6027,7 +6053,50 @@ document.querySelectorAll('.footer-annee-span, #footer-annee').forEach(el => {
 
 <script>
 
+function prepareArticlePage(articleId) {
+  const article = articleId ? Storage.getArticleById(articleId) : null;
+  const carte = document.getElementById('article-carte-detail');
+  const introuvable = document.getElementById('article-introuvable');
+
+  if (!article) {
+    carte.hidden = true;
+    introuvable.hidden = false;
+    document.title = 'Article introuvable — Kiosque';
+    return;
+  }
+  carte.hidden = false;
+  introuvable.hidden = true;
+
+  const blog = Storage.getBlogById(article.blogId);
+  const pieces = Array.isArray(article.pieceJointes) ? article.pieceJointes : [];
+
+  document.title = `${article.titre} — Kiosque`;
+  document.getElementById('fil-lien-blog-article').textContent = blog ? blog.titre : 'Publication';
+  document.getElementById('fil-lien-blog-article').href = blog ? `#/blog?id=${encodeURIComponent(blog.id)}` : '#/';
+  document.getElementById('fil-titre-article').textContent = article.titre;
+
+  document.getElementById('article-detail-titre').textContent = article.titre;
+  document.getElementById('article-detail-tampon').textContent = article.statut;
+  document.getElementById('article-detail-tampon').dataset.statut = article.statut;
+  document.getElementById('article-detail-meta').innerHTML =
+    `Par ${echapper(article.auteur)}<br>Publié le ${formaterDateLongue(article.dateCreation)}<br>Mis à jour le ${formaterDateLongue(article.dateModification)}`;
+
+  const illu = document.getElementById('article-detail-illustration');
+  const illuImg = document.getElementById('article-detail-illustration-img');
+  if (article.image) { illu.hidden = false; illuImg.src = article.image; }
+  else { illu.hidden = true; illuImg.src = ''; }
+
+  document.getElementById('article-detail-contenu').innerHTML = article.contenu || "<p><em>Cet article n'a pas encore de contenu.</em></p>";
+
+  document.getElementById('article-detail-pieces').innerHTML = pieces.length
+    ? pieces.map(p => `<a href="${p.donnees}" download="${echapper(p.nom)}">📄 ${echapper(p.nom)}</a>`).join('')
+    : '';
+
+  document.getElementById('article-detail-retour').href = blog ? `#/blog?id=${encodeURIComponent(blog.id)}` : '#/';
+}
+
 function analyserHash() {
+
   let hash = window.location.hash || '';
   hash = hash.replace(/^#\/?/, '');
   const [chemin, requete] = hash.split('?');
@@ -6065,6 +6134,12 @@ function router() {
   if (chemin === 'blog') {
     afficherPage('blog');
     prepareBlogPage(params.get('id'));
+    return;
+  }
+
+  if (chemin === 'article') {
+    afficherPage('article');
+    prepareArticlePage(params.get('id'));
     return;
   }
 
