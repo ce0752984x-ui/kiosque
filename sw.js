@@ -1,14 +1,13 @@
-// sw.js – Service Worker corrigé pour Kiosque
+// sw.js – Service Worker avec stratégie Stale-While-Revalidate et clone sécurisé
 
 const CACHE_NAME = 'kiosque-cache-v1';
 const STATIC_ASSETS = [
   '/kiosque/',
-  '/kiosque/index.html',
-  // Ajoutez ici tous les fichiers statiques que vous voulez mettre en cache
-  // Exemple : '/kiosque/style.css', '/kiosque/script.js', etc.
+  '/kiosque/index.html'
+  // Ajoutez ici vos fichiers statiques (CSS, JS, icônes)
 ];
 
-// Installation : pré-cache des assets statiques
+// Installation : pré-cache
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -17,7 +16,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activation : nettoyer les anciens caches
+// Activation : nettoyage des anciens caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
@@ -33,24 +32,19 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
 
-  // Stratégie pour les requêtes de navigation (pages HTML)
+  // Stratégie pour les pages HTML (navigation)
   if (request.mode === 'navigate') {
     event.respondWith(
       (async () => {
         try {
-          // On tente d'abord le réseau
           const networkResponse = await fetch(request);
-          // Clone avant de mettre en cache (car on va lire le corps)
+          // Clone obligatoire avant de mettre en cache
           const cache = await caches.open(CACHE_NAME);
           cache.put(request, networkResponse.clone());
           return networkResponse;
         } catch (error) {
-          // Si le réseau échoue, on sert le cache
           const cachedResponse = await caches.match(request);
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // Fallback : page d'erreur (optionnelle)
+          if (cachedResponse) return cachedResponse;
           return new Response('Page non disponible hors ligne', {
             status: 503,
             statusText: 'Service Unavailable'
@@ -61,34 +55,29 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Pour les autres requêtes (images, CSS, JS, etc.) : stratégie cache-first
+  // Autres ressources (images, CSS, JS) : cache-first
   event.respondWith(
     (async () => {
       const cachedResponse = await caches.match(request);
       if (cachedResponse) {
-        // On retourne la réponse du cache, et on met à jour en arrière-plan
-        // sans consommer le corps de la réponse du cache.
-        // On clone pour ne pas corrompre le cache.
-        const fetchPromise = fetch(request).then(networkResponse => {
-          // Mise à jour du cache avec le clone
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(request, networkResponse.clone());
-          });
-          return networkResponse;
+        // Mise à jour en arrière-plan (sans bloquer)
+        fetch(request).then(networkResponse => {
+          if (networkResponse.ok) {
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(request, networkResponse.clone());
+            });
+          }
         }).catch(() => {});
-        // On ne bloque pas sur fetchPromise
         return cachedResponse;
       }
 
-      // Pas dans le cache : on va chercher sur le réseau
+      // Pas dans le cache : réseau
       try {
         const networkResponse = await fetch(request);
-        // Clone avant de mettre en cache
         const cache = await caches.open(CACHE_NAME);
         cache.put(request, networkResponse.clone());
         return networkResponse;
       } catch (error) {
-        // Erreur réseau, pas de cache -> retourne une erreur
         return new Response('Ressource non disponible', {
           status: 404,
           statusText: 'Not Found'
