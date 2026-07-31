@@ -1,4 +1,4 @@
-// storage.js – Firebase Firestore avec compression d'images
+// storage.js – Firebase avec compression d'images
 
 firebase.initializeApp({
   apiKey: "AIzaSyARV_E4XtJS13CndRnYQqtjVGP7LcxxPzs",
