@@ -1,5 +1,4 @@
-// sw.js – Service Worker corrigé (ignore les requêtes non-GET)
-
+// sw.js – Service Worker corrigé
 const CACHE_NAME = 'kiosque-cache-v1';
 const STATIC_ASSETS = [
   '/kiosque/',
@@ -29,7 +28,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
 
-  // ⚠️ Ignorer les requêtes non-GET (POST, PUT, DELETE, etc.)
+  // Ignorer les requêtes non-GET (POST, PUT, DELETE, etc.)
   if (request.method !== 'GET') {
     event.respondWith(fetch(request));
     return;
@@ -57,7 +56,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Autres ressources (images, CSS, JS) : cache-first
+  // Autres ressources : cache-first
   event.respondWith(
     (async () => {
       const cachedResponse = await caches.match(request);
