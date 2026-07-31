@@ -1,13 +1,7 @@
-// sw.js – Service Worker avec stratégie Stale-While-Revalidate et clone sécurisé
-
+// sw.js
 const CACHE_NAME = 'kiosque-cache-v1';
-const STATIC_ASSETS = [
-  '/kiosque/',
-  '/kiosque/index.html'
-  // Ajoutez ici vos fichiers statiques (CSS, JS, icônes)
-];
+const STATIC_ASSETS = ['/kiosque/', '/kiosque/index.html'];
 
-// Installation : pré-cache
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -16,72 +10,50 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activation : nettoyage des anciens caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME)
-            .map(key => caches.delete(key))
-      );
+      return Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)));
     }).then(() => self.clients.claim())
   );
 });
 
-// Interception des requêtes
 self.addEventListener('fetch', event => {
   const request = event.request;
-
-  // Stratégie pour les pages HTML (navigation)
   if (request.mode === 'navigate') {
     event.respondWith(
       (async () => {
         try {
-          const networkResponse = await fetch(request);
-          // Clone obligatoire avant de mettre en cache
+          const response = await fetch(request);
           const cache = await caches.open(CACHE_NAME);
-          cache.put(request, networkResponse.clone());
-          return networkResponse;
-        } catch (error) {
-          const cachedResponse = await caches.match(request);
-          if (cachedResponse) return cachedResponse;
-          return new Response('Page non disponible hors ligne', {
-            status: 503,
-            statusText: 'Service Unavailable'
-          });
+          cache.put(request, response.clone());
+          return response;
+        } catch {
+          const cached = await caches.match(request);
+          return cached || new Response('Page non disponible hors ligne', { status: 503 });
         }
       })()
     );
     return;
   }
-
-  // Autres ressources (images, CSS, JS) : cache-first
   event.respondWith(
     (async () => {
-      const cachedResponse = await caches.match(request);
-      if (cachedResponse) {
-        // Mise à jour en arrière-plan (sans bloquer)
-        fetch(request).then(networkResponse => {
-          if (networkResponse.ok) {
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(request, networkResponse.clone());
-            });
+      const cached = await caches.match(request);
+      if (cached) {
+        fetch(request).then(res => {
+          if (res.ok) {
+            caches.open(CACHE_NAME).then(cache => cache.put(request, res.clone()));
           }
         }).catch(() => {});
-        return cachedResponse;
+        return cached;
       }
-
-      // Pas dans le cache : réseau
       try {
-        const networkResponse = await fetch(request);
+        const response = await fetch(request);
         const cache = await caches.open(CACHE_NAME);
-        cache.put(request, networkResponse.clone());
-        return networkResponse;
-      } catch (error) {
-        return new Response('Ressource non disponible', {
-          status: 404,
-          statusText: 'Not Found'
-        });
+        cache.put(request, response.clone());
+        return response;
+      } catch {
+        return new Response('Ressource non disponible', { status: 404 });
       }
     })()
   );
