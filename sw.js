@@ -1,90 +1,99 @@
-/**
- * Service Worker — Kiosque PWA
- * Gère le cache hors-ligne et l'affichage des notifications système natives.
- */
+// sw.js – Service Worker corrigé pour Kiosque
 
-const CACHE_NOM = 'kiosque-v2';
-
-const RESSOURCES_STATIQUES = [
+const CACHE_NAME = 'kiosque-cache-v1';
+const STATIC_ASSETS = [
   '/kiosque/',
   '/kiosque/index.html',
-  'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js'
+  // Ajoutez ici tous les fichiers statiques que vous voulez mettre en cache
+  // Exemple : '/kiosque/style.css', '/kiosque/script.js', etc.
 ];
 
-// ── Installation ──────────────────────────────────────────────────────
-self.addEventListener('install', (event) => {
+// Installation : pré-cache des assets statiques
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NOM).then((cache) =>
-      cache.addAll(RESSOURCES_STATIQUES).catch((err) =>
-        console.warn('SW: ressources non mises en cache', err)
-      )
-    )
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(STATIC_ASSETS))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-// ── Activation ────────────────────────────────────────────────────────
-self.addEventListener('activate', (event) => {
+// Activation : nettoyer les anciens caches
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((cles) =>
-      Promise.all(
-        cles.filter((cle) => cle !== CACHE_NOM).map((cle) => caches.delete(cle))
-      )
-    )
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.filter(key => key !== CACHE_NAME)
+            .map(key => caches.delete(key))
+      );
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// ── Fetch : réseau d'abord, cache en secours ──────────────────────────
-self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('firestore.googleapis.com') ||
-      (event.request.url.includes('firebase') && event.request.url.includes('googleapis'))) {
-    return; // Ne pas intercepter Firestore
+// Interception des requêtes
+self.addEventListener('fetch', event => {
+  const request = event.request;
+
+  // Stratégie pour les requêtes de navigation (pages HTML)
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      (async () => {
+        try {
+          // On tente d'abord le réseau
+          const networkResponse = await fetch(request);
+          // Clone avant de mettre en cache (car on va lire le corps)
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(request, networkResponse.clone());
+          return networkResponse;
+        } catch (error) {
+          // Si le réseau échoue, on sert le cache
+          const cachedResponse = await caches.match(request);
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Fallback : page d'erreur (optionnelle)
+          return new Response('Page non disponible hors ligne', {
+            status: 503,
+            statusText: 'Service Unavailable'
+          });
+        }
+      })()
+    );
+    return;
   }
 
+  // Pour les autres requêtes (images, CSS, JS, etc.) : stratégie cache-first
   event.respondWith(
-    fetch(event.request)
-      .then((reponse) => {
-        if (reponse && reponse.status === 200 && event.request.method === 'GET') {
-          caches.open(CACHE_NOM).then((cache) =>
-            cache.put(event.request, reponse.clone())
-          );
-        }
-        return reponse;
-      })
-      .catch(() =>
-        caches.match(event.request).then((reponseCache) => {
-          if (reponseCache) return reponseCache;
-          if (event.request.mode === 'navigate') {
-            return caches.match('/kiosque/index.html');
-          }
-        })
-      )
-  );
-});
-
-// ── Clic sur une notification → ouvrir le Kiosque ────────────────────
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-
-  const urlCible = (event.notification.data && event.notification.data.url)
-    ? event.notification.data.url
-    : '/kiosque/';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsOuverts) => {
-      // Si le Kiosque est déjà ouvert dans un onglet, le mettre au premier plan
-      for (const client of clientsOuverts) {
-        if (client.url.includes('/kiosque/') && 'focus' in client) {
-          return client.focus();
-        }
+    (async () => {
+      const cachedResponse = await caches.match(request);
+      if (cachedResponse) {
+        // On retourne la réponse du cache, et on met à jour en arrière-plan
+        // sans consommer le corps de la réponse du cache.
+        // On clone pour ne pas corrompre le cache.
+        const fetchPromise = fetch(request).then(networkResponse => {
+          // Mise à jour du cache avec le clone
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(request, networkResponse.clone());
+          });
+          return networkResponse;
+        }).catch(() => {});
+        // On ne bloque pas sur fetchPromise
+        return cachedResponse;
       }
-      // Sinon ouvrir un nouvel onglet
-      if (clients.openWindow) {
-        return clients.openWindow(urlCible);
+
+      // Pas dans le cache : on va chercher sur le réseau
+      try {
+        const networkResponse = await fetch(request);
+        // Clone avant de mettre en cache
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(request, networkResponse.clone());
+        return networkResponse;
+      } catch (error) {
+        // Erreur réseau, pas de cache -> retourne une erreur
+        return new Response('Ressource non disponible', {
+          status: 404,
+          statusText: 'Not Found'
+        });
       }
-    })
+    })()
   );
 });
