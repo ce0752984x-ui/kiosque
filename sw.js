@@ -1,6 +1,11 @@
-// sw.js
+// sw.js – Service Worker corrigé (ignore les requêtes non-GET)
+
 const CACHE_NAME = 'kiosque-cache-v1';
-const STATIC_ASSETS = ['/kiosque/', '/kiosque/index.html'];
+const STATIC_ASSETS = [
+  '/kiosque/',
+  '/kiosque/index.html'
+  // Ajoutez ici d'autres fichiers statiques si nécessaire
+];
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -13,47 +18,70 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
-      return Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)));
+      return Promise.all(
+        keys.filter(key => key !== CACHE_NAME)
+            .map(key => caches.delete(key))
+      );
     }).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
   const request = event.request;
+
+  // ⚠️ Ignorer les requêtes non-GET (POST, PUT, DELETE, etc.)
+  if (request.method !== 'GET') {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Stratégie pour les pages HTML (navigation)
   if (request.mode === 'navigate') {
     event.respondWith(
       (async () => {
         try {
-          const response = await fetch(request);
+          const networkResponse = await fetch(request);
           const cache = await caches.open(CACHE_NAME);
-          cache.put(request, response.clone());
-          return response;
-        } catch {
-          const cached = await caches.match(request);
-          return cached || new Response('Page non disponible hors ligne', { status: 503 });
+          cache.put(request, networkResponse.clone());
+          return networkResponse;
+        } catch (error) {
+          const cachedResponse = await caches.match(request);
+          if (cachedResponse) return cachedResponse;
+          return new Response('Page non disponible hors ligne', {
+            status: 503,
+            statusText: 'Service Unavailable'
+          });
         }
       })()
     );
     return;
   }
+
+  // Autres ressources (images, CSS, JS) : cache-first
   event.respondWith(
     (async () => {
-      const cached = await caches.match(request);
-      if (cached) {
-        fetch(request).then(res => {
-          if (res.ok) {
-            caches.open(CACHE_NAME).then(cache => cache.put(request, res.clone()));
+      const cachedResponse = await caches.match(request);
+      if (cachedResponse) {
+        fetch(request).then(networkResponse => {
+          if (networkResponse.ok) {
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(request, networkResponse.clone());
+            });
           }
         }).catch(() => {});
-        return cached;
+        return cachedResponse;
       }
+
       try {
-        const response = await fetch(request);
+        const networkResponse = await fetch(request);
         const cache = await caches.open(CACHE_NAME);
-        cache.put(request, response.clone());
-        return response;
-      } catch {
-        return new Response('Ressource non disponible', { status: 404 });
+        cache.put(request, networkResponse.clone());
+        return networkResponse;
+      } catch (error) {
+        return new Response('Ressource non disponible', {
+          status: 404,
+          statusText: 'Not Found'
+        });
       }
     })()
   );
