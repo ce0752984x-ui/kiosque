@@ -1,9 +1,4 @@
-/**
- * storage.js — Firebase Firestore avec compression d'images
- * ----------------------------------------------------------------------
- * Toutes les images et pièces jointes sont compressées avant envoi pour
- * rester sous la limite de 1 Mo de Firestore.
- */
+// storage.js – Firebase Firestore avec compression d'images
 
 firebase.initializeApp({
   apiKey: "AIzaSyARV_E4XtJS13CndRnYQqtjVGP7LcxxPzs",
@@ -39,7 +34,7 @@ function afficherBanniereKiosque(texte, couleurFond) {
   setTimeout(() => banniere.remove(), 9000);
 }
 
-// ── Compression d'image (réduit la taille et convertit en JPEG) ──
+// ── Compression d'image ──────────────────────────────────────────────
 function compresserImage(dataUrl, maxLargeur = 800, qualite = 0.7) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -113,7 +108,6 @@ function updateBlog(id, data) {
 
 function deleteBlog(id) {
   db.collection('blogs').doc(id).delete().catch(e => console.error('Firestore deleteBlog:', e));
-  // Supprimer aussi les articles liés
   _cache.articles
     .filter(a => a.blogId === id)
     .forEach(a => db.collection('articles').doc(a.id).delete().catch(() => {}));
@@ -126,11 +120,6 @@ function getArticlesByBlog(blogId) { return _cache.articles.filter(a => a.blogId
 
 const STATUTS = ['Brouillon', 'À valider', 'À publier', 'En ligne', 'Hors ligne', 'À supprimer'];
 
-/**
- * Nettoie les pièces jointes pour Firestore :
- * - S'assure que chaque élément n'a que des propriétés simples (string, number, bool).
- * - Supprime les éventuels objets imbriqués non autorisés.
- */
 function nettoyerPiecesJointes(pieces) {
   if (!Array.isArray(pieces)) return [];
   return pieces.map(p => ({
@@ -142,18 +131,13 @@ function nettoyerPiecesJointes(pieces) {
   }));
 }
 
-/**
- * Crée un article (compressé) avec validation de taille.
- */
 async function createArticle({ blogId, titre, resume, contenu, auteur, statut, image, pieceJointes }) {
   const horodatage = now();
   const id = generateId('art');
 
-  // Compression de l'image si présente
   let imageFinale = null;
   if (image && typeof image === 'string' && image.startsWith('data:')) {
     try {
-      // On limite la largeur à 600px et qualité 0.6 pour les illustrations
       imageFinale = await compresserImage(image, 600, 0.6);
     } catch (e) {
       console.warn('Erreur compression image, utilisation brute', e);
@@ -161,10 +145,8 @@ async function createArticle({ blogId, titre, resume, contenu, auteur, statut, i
     }
   }
 
-  // Nettoyage des pièces jointes
   const piecesNettoyees = nettoyerPiecesJointes(pieceJointes);
 
-  // Construction de l'objet article (toutes les valeurs sont scalaires)
   const article = {
     id,
     blogId: String(blogId || ''),
@@ -179,9 +161,8 @@ async function createArticle({ blogId, titre, resume, contenu, auteur, statut, i
     statut: STATUTS.includes(statut) ? statut : 'Brouillon'
   };
 
-  // Taille estimée (approximative) – si trop lourde, on alerte
   const tailleEstimee = JSON.stringify(article).length;
-  if (tailleEstimee > 900 * 1024) { // 900 Ko de marge
+  if (tailleEstimee > 900 * 1024) {
     afficherBanniereKiosque(
       "L'article est trop lourd (images/pieces jointes). Essayez des fichiers plus légers.",
       '#8C2F39'
@@ -195,7 +176,7 @@ async function createArticle({ blogId, titre, resume, contenu, auteur, statut, i
     console.error('Firestore createArticle:', err);
     let message = "Erreur d'enregistrement. Vérifiez votre connexion.";
     if (err.message && err.message.includes('exceeds')) {
-      message = "L'article est trop lourd (images/pieces jointes). Essayez des fichiers plus légers.";
+      message = "L'article est trop lourd. Réduisez les images ou pièces jointes.";
     }
     afficherBanniereKiosque(message, '#8C2F39');
     throw err;
@@ -226,9 +207,8 @@ async function updateArticle(id, data) {
     dateModification: now(),
     resume: (data.resume || '').trim().slice(0, 250)
   };
-  delete updated.id; // on conserve l'id existant
+  delete updated.id;
 
-  // Vérification taille
   const tailleEstimee = JSON.stringify(updated).length;
   if (tailleEstimee > 900 * 1024) {
     afficherBanniereKiosque(
@@ -430,9 +410,9 @@ async function reinitialiser() {
 
 // ── Export ────────────────────────────────────────────────────────────
 const Storage = {
-  getBlogs, saveBlogs: (list) => { /* legacy */ },
+  getBlogs, saveBlogs: (list) => {},
   getBlogById, createBlog, updateBlog, deleteBlog,
-  getArticles, saveArticles: (list) => { /* legacy */ },
+  getArticles, saveArticles: (list) => {},
   getArticleById, getArticlesByBlog,
   createArticle, updateArticle, setArticleStatut, deleteArticle,
   getUsers, getUserById, createUser, updateUser, deleteUser,
@@ -443,5 +423,4 @@ const Storage = {
   STATUTS
 };
 
-// Rendre accessible globalement
 window.Storage = Storage;
