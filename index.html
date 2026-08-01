@@ -21,11 +21,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  <!-- Feuille de style (identique à la version précédente) -->
   <style>
-    /* =====================================================================
-       STYLES COMPLETS (version d'origine avec rubriques)
-       ===================================================================== */
+    /* --- STYLES COMPLETS (identiques à l'original) --- */
     @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
     :root {
@@ -1062,7 +1059,9 @@
       <p class="lead">Chroniques urbaines, carnets de voyage, actualités numériques : parcourez les publications et lisez leurs derniers articles en ligne.</p>
     </section>
     <section class="conteneur">
+      <!-- CONTENEUR POUR LES RUBRIQUES -->
       <div id="accueil-rubriques"></div>
+      <!-- ÉTAT VIDE -->
       <div class="etat-vide" id="etat-vide-accueil" hidden>
         <h3>Aucun article en ligne pour le moment</h3>
         <p>La rédaction n'a pas encore publié d'article. Revenez bientôt.</p>
@@ -1275,7 +1274,7 @@
 <!-- ===== SCRIPTS ===== -->
 <script>
 // ============================================================
-// STORAGE (Firestore + localStorage) — identique à la version précédente
+// STORAGE (Firestore + localStorage)
 // ============================================================
 firebase.initializeApp({
   apiKey: "AIzaSyARV_E4XtJS13CndRnYQqtjVGP7LcxxPzs",
@@ -1669,6 +1668,7 @@ function lireFichierEnBase64(f) { return new Promise((resolve, reject) => { cons
 function prepareAccueilPage() {
   const conteneur = document.getElementById('accueil-rubriques');
   const etatVide = document.getElementById('etat-vide-accueil');
+  if (!conteneur) return; // sécurité
   const categories = Storage.getCategories();
   const articles = Storage.getArticles().filter(a => a.statut === 'En ligne');
 
@@ -1690,11 +1690,11 @@ function prepareAccueilPage() {
   const rubriquesAvecArticles = Object.keys(grouped).filter(key => grouped[key].articles.length > 0);
 
   if (rubriquesAvecArticles.length === 0) {
-    etatVide.hidden = false;
+    if (etatVide) etatVide.hidden = false;
     conteneur.innerHTML = '';
     return;
   }
-  etatVide.hidden = true;
+  if (etatVide) etatVide.hidden = true;
 
   let html = '';
   rubriquesAvecArticles.forEach(key => {
@@ -1748,6 +1748,7 @@ function appliquerMaintenance(settings) {
 // ============================================================
 function mettreAJourVolet() {
   const liste = document.getElementById('liste-rubriques-volet');
+  if (!liste) return;
   const categories = Storage.getCategories();
   const blogs = Storage.getBlogs();
   const articles = Storage.getArticles().filter(a => a.statut === 'En ligne');
@@ -1810,11 +1811,12 @@ function afficherArticlesAccordeon() {
   if (!blogState.blog) return;
   const conteneur = document.getElementById('liste-articles-accordeon');
   const etatVide = document.getElementById('etat-vide-blog');
+  if (!conteneur) return;
   const tous = Storage.getArticlesByBlog(blogState.blog.id);
   const filtres = blogState.statutActif === 'Tous' ? tous : tous.filter(a => a.statut === blogState.statutActif);
   filtres.sort((a,b) => new Date(b.dateCreation) - new Date(a.dateCreation));
-  if (filtres.length === 0) { conteneur.innerHTML = ''; etatVide.hidden = false; return; }
-  etatVide.hidden = true;
+  if (filtres.length === 0) { conteneur.innerHTML = ''; if (etatVide) etatVide.hidden = false; return; }
+  if (etatVide) etatVide.hidden = true;
   conteneur.innerHTML = filtres.map(a => {
     const pieces = Array.isArray(a.pieceJointes) ? a.pieceJointes : [];
     return `<div class="article-accordeon" data-article-id="${a.id}">
@@ -1834,14 +1836,16 @@ function afficherArticlesAccordeon() {
   conteneur.querySelectorAll('.article-accordeon').forEach(acc => {
     const header = acc.querySelector('.en-tete-article');
     const body = acc.querySelector('.contenu-article');
-    header.addEventListener('click', () => {
-      const open = body.classList.toggle('ouvert');
-      acc.classList.toggle('ouvert', open);
-      header.setAttribute('aria-expanded', String(open));
-    });
-    header.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); header.click(); }
-    });
+    if (header && body) {
+      header.addEventListener('click', () => {
+        const open = body.classList.toggle('ouvert');
+        acc.classList.toggle('ouvert', open);
+        header.setAttribute('aria-expanded', String(open));
+      });
+      header.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); header.click(); }
+      });
+    }
   });
 }
 
@@ -1859,19 +1863,19 @@ function prepareBlogPage(blogId) {
 
   if (!blog) {
     document.title = 'Publication introuvable — Kiosque';
-    titreBlog.textContent = 'Publication introuvable';
-    filTitre.textContent = 'Introuvable';
-    desc.textContent = "Cette publication n'existe pas ou a été supprimée.";
-    conteneurListe.innerHTML = '';
-    etatVide.hidden = true;
-    conteneurFiltres.hidden = true;
+    if (titreBlog) titreBlog.textContent = 'Publication introuvable';
+    if (filTitre) filTitre.textContent = 'Introuvable';
+    if (desc) desc.textContent = "Cette publication n'existe pas ou a été supprimée.";
+    if (conteneurListe) conteneurListe.innerHTML = '';
+    if (etatVide) etatVide.hidden = true;
+    if (conteneurFiltres) conteneurFiltres.hidden = true;
     return;
   }
-  conteneurFiltres.hidden = false;
+  if (conteneurFiltres) conteneurFiltres.hidden = false;
   document.title = blog.titre + ' — Kiosque';
-  titreBlog.textContent = blog.titre;
-  filTitre.textContent = blog.titre;
-  desc.textContent = blog.description || '';
+  if (titreBlog) titreBlog.textContent = blog.titre;
+  if (filTitre) filTitre.textContent = blog.titre;
+  if (desc) desc.textContent = blog.description || '';
   construireFiltresBlog();
   afficherArticlesAccordeon();
 }
@@ -1881,40 +1885,40 @@ function prepareBlogPage(blogId) {
 // ============================================================
 function prepareLoginPage() {
   const msg = document.getElementById('message-erreur');
-  msg.classList.remove('visible'); msg.textContent = '';
-  document.getElementById('form-connexion').reset();
-  document.getElementById('champ-identifiant').focus();
+  if (msg) { msg.classList.remove('visible'); msg.textContent = ''; }
+  const form = document.getElementById('form-connexion');
+  if (form) form.reset();
+  const ident = document.getElementById('champ-identifiant');
+  if (ident) ident.focus();
   const settings = Storage.getSettings();
   const ddnCont = document.getElementById('champ-ddn-conteneur');
   if (ddnCont) ddnCont.style.display = settings.ddnRequis ? '' : 'none';
 }
-document.getElementById('form-connexion').addEventListener('submit', (e) => {
+document.getElementById('form-connexion')?.addEventListener('submit', (e) => {
   e.preventDefault();
-  const ident = document.getElementById('champ-identifiant').value;
-  const mdp = document.getElementById('champ-motdepasse').value;
-  const ddn = document.getElementById('champ-ddn').value;
+  const ident = document.getElementById('champ-identifiant')?.value || '';
+  const mdp = document.getElementById('champ-motdepasse')?.value || '';
+  const ddn = document.getElementById('champ-ddn')?.value || '';
   const res = Auth.login(ident, mdp, ddn);
   if (res.ok) navigate('#/admin');
-  else { const msg = document.getElementById('message-erreur'); msg.textContent = res.erreur; msg.classList.add('visible'); }
+  else { const msg = document.getElementById('message-erreur'); if (msg) { msg.textContent = res.erreur; msg.classList.add('visible'); } }
 });
 
 // ============================================================
-// ROUTEUR SPA (avec hash #/ ) — fonctionne en local et sur serveur
+// ROUTEUR SPA (avec hash #/ )
 // ============================================================
 function navigate(hash) {
   window.location.hash = hash;
   router();
 }
 
-// Interception des clics sur les liens internes (href="#..." ou #/...)
+// Interception des clics sur les liens internes
 document.addEventListener('click', function(e) {
   const target = e.target.closest('a');
   if (!target) return;
   const href = target.getAttribute('href');
   if (!href) return;
-  // Ignorer les liens avec target="_blank" ou download
   if (target.getAttribute('target') === '_blank' || target.getAttribute('download')) return;
-  // Intercepter les liens commençant par # (fragments)
   if (href.startsWith('#')) {
     e.preventDefault();
     navigate(href);
@@ -1923,7 +1927,6 @@ document.addEventListener('click', function(e) {
 
 function analyserHash() {
   let hash = window.location.hash || '#/';
-  // Supprimer le # initial
   hash = hash.replace(/^#/, '');
   if (!hash.startsWith('/')) hash = '/' + hash;
   const [chemin, requete] = hash.split('?');
@@ -2087,19 +2090,19 @@ refs.navBoutons.forEach(b => b.addEventListener('click', () => changerVue(b.data
 
 function appliquerRestrictionsRole() {
   const admin = estAdminConnecte();
-  refs.navComptes.hidden = !admin;
+  if (refs.navComptes) refs.navComptes.hidden = !admin;
 }
 function afficherUtilisateurCourant() {
   const s = Auth.getCurrentUser();
   if (!s) return;
-  refs.nomUtilisateur.textContent = s.nom || s.username;
-  refs.roleUtilisateur.textContent = 'Administrateur';
+  if (refs.nomUtilisateur) refs.nomUtilisateur.textContent = s.nom || s.username;
+  if (refs.roleUtilisateur) refs.roleUtilisateur.textContent = 'Administrateur';
   appliquerRestrictionsRole();
 }
-refs.btnDeconnexion.addEventListener('click', () => Auth.logout());
+refs.btnDeconnexion?.addEventListener('click', () => Auth.logout());
 
-function ouvrirModale(id) { document.getElementById(id).classList.add('visible'); }
-function fermerModale(id) { document.getElementById(id).classList.remove('visible'); }
+function ouvrirModale(id) { const el = document.getElementById(id); if (el) el.classList.add('visible'); }
+function fermerModale(id) { const el = document.getElementById(id); if (el) el.classList.remove('visible'); }
 document.querySelectorAll('[data-fermer]').forEach(el => el.addEventListener('click', () => fermerModale(el.dataset.fermer)));
 document.querySelectorAll('.fond-modale').forEach(fond => fond.addEventListener('click', (e) => { if (e.target === fond && fond.id !== 'modale-editeur-fond') fond.classList.remove('visible'); }));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.fond-modale.visible').forEach(f => f.classList.remove('visible')); });
@@ -2110,11 +2113,12 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.q
 // ============================================================
 function rafraichirDashboard() {
   const stats = Storage.getStats();
-  refs.statBlogs.textContent = stats.nbBlogs;
-  refs.statArticles.textContent = stats.nbArticles;
-  refs.statBrouillons.textContent = stats.nbBrouillons;
-  refs.statPublies.textContent = stats.nbPublies;
+  if (refs.statBlogs) refs.statBlogs.textContent = stats.nbBlogs;
+  if (refs.statArticles) refs.statArticles.textContent = stats.nbArticles;
+  if (refs.statBrouillons) refs.statBrouillons.textContent = stats.nbBrouillons;
+  if (refs.statPublies) refs.statPublies.textContent = stats.nbPublies;
   const blogs = Storage.getBlogs();
+  if (!refs.listeBlogsResume) return;
   if (blogs.length === 0) { refs.listeBlogsResume.innerHTML = '<p class="apercu-vide">Aucune publication.</p>'; return; }
   refs.listeBlogsResume.innerHTML = blogs.slice(0,5).map(b => {
     const arts = Storage.getArticlesByBlog(b.id);
@@ -2123,7 +2127,7 @@ function rafraichirDashboard() {
   }).join('');
 }
 
-refs.actionsRapides.forEach(b => b.addEventListener('click', () => gererActionRapide(b.dataset.action)));
+refs.actionsRapides?.forEach(b => b.addEventListener('click', () => gererActionRapide(b.dataset.action)));
 function gererActionRapide(action) {
   switch(action) {
     case 'creer-rubrique': changerVue('rubriques'); ouvrirModaleRubrique(null); break;
@@ -2133,15 +2137,16 @@ function gererActionRapide(action) {
     case 'supprimer': changerVue('articles'); filtreStatutArticles = 'Tous'; rafraichirVueArticles(); afficherIndice('Cliquez sur "Supprimer" sur l\'article.'); break;
   }
 }
-function afficherIndice(txt) { refs.indiceActionRapide.textContent = txt; refs.indiceActionRapide.hidden = false; clearTimeout(window._indiceTimer); window._indiceTimer = setTimeout(() => refs.indiceActionRapide.hidden = true, 6000); }
+function afficherIndice(txt) { if (refs.indiceActionRapide) { refs.indiceActionRapide.textContent = txt; refs.indiceActionRapide.hidden = false; clearTimeout(window._indiceTimer); window._indiceTimer = setTimeout(() => refs.indiceActionRapide.hidden = true, 6000); } }
 
 // RUBRIQUES
 function rafraichirVueRubriques() {
   const cats = Storage.getCategories();
   const conteneur = document.getElementById('liste-rubriques-admin');
   const etatVide = document.getElementById('etat-vide-rubriques');
-  if (cats.length === 0) { etatVide.hidden = false; conteneur.innerHTML = ''; return; }
-  etatVide.hidden = true;
+  if (!conteneur) return;
+  if (cats.length === 0) { if (etatVide) etatVide.hidden = false; conteneur.innerHTML = ''; return; }
+  if (etatVide) etatVide.hidden = true;
   conteneur.innerHTML = cats.map(c => {
     const nbBlogs = Storage.getBlogs().filter(b => b.categorieId === c.id).length;
     return `<div class="ligne-blog-admin"><div class="infos"><h3>${echapper(c.nom)}</h3><span class="meta-cellule">${nbBlogs} publication${nbBlogs>1?'s':''}</span></div><div class="actions-cellule"><button class="btn btn-fantome btn-petit" data-modifier-rubrique="${c.id}">Modifier</button><button class="btn btn-danger btn-petit" data-supprimer-rubrique="${c.id}">Supprimer</button></div></div>`;
@@ -2151,17 +2156,17 @@ function rafraichirVueRubriques() {
 }
 function ouvrirModaleRubrique(id) {
   const cat = id ? Storage.getCategoryById(id) : null;
-  refs.titreModaleRubrique.textContent = cat ? 'Modifier la rubrique' : 'Nouvelle rubrique';
-  refs.rubriqueId.value = cat ? cat.id : '';
-  refs.rubriqueNom.value = cat ? cat.nom : '';
+  if (refs.titreModaleRubrique) refs.titreModaleRubrique.textContent = cat ? 'Modifier la rubrique' : 'Nouvelle rubrique';
+  if (refs.rubriqueId) refs.rubriqueId.value = cat ? cat.id : '';
+  if (refs.rubriqueNom) refs.rubriqueNom.value = cat ? cat.nom : '';
   ouvrirModale('modale-rubrique-fond');
-  refs.rubriqueNom.focus();
+  if (refs.rubriqueNom) refs.rubriqueNom.focus();
 }
-refs.btnNouvelleRubrique.addEventListener('click', () => ouvrirModaleRubrique(null));
-refs.formRubrique.addEventListener('submit', async (e) => {
+refs.btnNouvelleRubrique?.addEventListener('click', () => ouvrirModaleRubrique(null));
+refs.formRubrique?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const id = refs.rubriqueId.value;
-  const nom = refs.rubriqueNom.value.trim();
+  const id = refs.rubriqueId?.value || '';
+  const nom = refs.rubriqueNom?.value.trim() || '';
   if (!nom) { afficherBanniereKiosque('Le nom est requis.', '#CC1533'); return; }
   try {
     if (id) await Storage.updateCategory(id, { nom });
@@ -2173,9 +2178,9 @@ refs.formRubrique.addEventListener('submit', async (e) => {
 function demanderSuppressionRubrique(id) {
   const cat = Storage.getCategoryById(id);
   if (!cat) return;
-  refs.texteModaleConfirmation.textContent = `Supprimer la rubrique « ${cat.nom} » ? (les publications seront retirées de cette rubrique)`;
+  if (refs.texteModaleConfirmation) refs.texteModaleConfirmation.textContent = `Supprimer la rubrique « ${cat.nom} » ? (les publications seront retirées de cette rubrique)`;
   ouvrirModale('modale-confirmation-fond');
-  refs.btnConfirmerSuppression.onclick = async () => {
+  if (refs.btnConfirmerSuppression) refs.btnConfirmerSuppression.onclick = async () => {
     await Storage.deleteCategory(id);
     fermerModale('modale-confirmation-fond');
     rafraichirTout();
@@ -2186,7 +2191,8 @@ function demanderSuppressionRubrique(id) {
 function rafraichirVueBlogs() {
   const blogs = Storage.getBlogs();
   const cats = Object.fromEntries(Storage.getCategories().map(c => [c.id, c.nom]));
-  refs.etatVideBlogs.hidden = blogs.length > 0;
+  if (refs.etatVideBlogs) refs.etatVideBlogs.hidden = blogs.length > 0;
+  if (!refs.listeBlogsComplete) return;
   refs.listeBlogsComplete.innerHTML = blogs.map(b => {
     const nb = Storage.getArticlesByBlog(b.id).length;
     const catNom = b.categorieId && cats[b.categorieId] ? cats[b.categorieId] : 'Sans rubrique';
@@ -2196,35 +2202,36 @@ function rafraichirVueBlogs() {
   refs.listeBlogsComplete.querySelectorAll('[data-supprimer-blog]').forEach(b => b.addEventListener('click', () => demanderSuppressionBlog(b.dataset.supprimerBlog)));
 }
 function remplirSelectCategories(select, selectedId) {
+  if (!select) return;
   const cats = Storage.getCategories();
   select.innerHTML = `<option value="">Sans rubrique</option>` + cats.map(c => `<option value="${c.id}" ${c.id===selectedId?'selected':''}>${echapper(c.nom)}</option>`).join('');
 }
 function ouvrirModaleBlogCreation() {
-  refs.titreModaleBlog.textContent = 'Nouvelle publication';
-  refs.formBlog.reset();
-  refs.blogId.value = '';
+  if (refs.titreModaleBlog) refs.titreModaleBlog.textContent = 'Nouvelle publication';
+  if (refs.formBlog) refs.formBlog.reset();
+  if (refs.blogId) refs.blogId.value = '';
   remplirSelectCategories(refs.blogCategorie, null);
   ouvrirModale('modale-blog-fond');
-  refs.blogTitre.focus();
+  if (refs.blogTitre) refs.blogTitre.focus();
 }
 function ouvrirModaleBlogModification(id) {
   const b = Storage.getBlogById(id);
   if (!b) return;
-  refs.titreModaleBlog.textContent = 'Modifier la publication';
-  refs.blogId.value = b.id;
-  refs.blogTitre.value = b.titre;
-  refs.blogDescription.value = b.description;
+  if (refs.titreModaleBlog) refs.titreModaleBlog.textContent = 'Modifier la publication';
+  if (refs.blogId) refs.blogId.value = b.id;
+  if (refs.blogTitre) refs.blogTitre.value = b.titre;
+  if (refs.blogDescription) refs.blogDescription.value = b.description;
   remplirSelectCategories(refs.blogCategorie, b.categorieId);
   ouvrirModale('modale-blog-fond');
-  refs.blogTitre.focus();
+  if (refs.blogTitre) refs.blogTitre.focus();
 }
-refs.btnNouveauBlog.addEventListener('click', ouvrirModaleBlogCreation);
-refs.formBlog.addEventListener('submit', async (e) => {
+refs.btnNouveauBlog?.addEventListener('click', ouvrirModaleBlogCreation);
+refs.formBlog?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const id = refs.blogId.value;
-  const titre = refs.blogTitre.value.trim();
-  const description = refs.blogDescription.value.trim();
-  const categorieId = refs.blogCategorie.value || null;
+  const id = refs.blogId?.value || '';
+  const titre = refs.blogTitre?.value.trim() || '';
+  const description = refs.blogDescription?.value.trim() || '';
+  const categorieId = refs.blogCategorie?.value || null;
   if (!titre) { afficherBanniereKiosque('Le titre est requis.', '#CC1533'); return; }
   try {
     if (id) await Storage.updateBlog(id, { titre, description, categorieId });
@@ -2236,9 +2243,9 @@ refs.formBlog.addEventListener('submit', async (e) => {
 function demanderSuppressionBlog(id) {
   const b = Storage.getBlogById(id);
   if (!b) return;
-  refs.texteModaleConfirmation.textContent = `Supprimer la publication « ${b.titre} » ? (ses articles seront supprimés)`;
+  if (refs.texteModaleConfirmation) refs.texteModaleConfirmation.textContent = `Supprimer la publication « ${b.titre} » ? (ses articles seront supprimés)`;
   ouvrirModale('modale-confirmation-fond');
-  refs.btnConfirmerSuppression.onclick = async () => {
+  if (refs.btnConfirmerSuppression) refs.btnConfirmerSuppression.onclick = async () => {
     await Storage.deleteBlog(id);
     fermerModale('modale-confirmation-fond');
     rafraichirTout();
@@ -2253,10 +2260,13 @@ let articleDetailId = null;
 
 function construireFiltresArticles() {
   const blogs = Storage.getBlogs();
+  if (!refs.filtresBlogArticles) return;
   refs.filtresBlogArticles.innerHTML = ['Tous', ...blogs.map(b=>b.titre)].map(l => `<button class="filtre-puce ${l===filtreBlogArticles?'actif':''}" data-filtre-blog="${echapper(l)}">${echapper(l)}</button>`).join('');
-  refs.filtresStatutArticles.innerHTML = ['Tous', ...Storage.STATUTS].map(s => `<button class="filtre-puce ${s===filtreStatutArticles?'actif':''}" data-filtre-statut="${echapper(s)}">${echapper(s)}</button>`).join('');
+  if (refs.filtresStatutArticles) {
+    refs.filtresStatutArticles.innerHTML = ['Tous', ...Storage.STATUTS].map(s => `<button class="filtre-puce ${s===filtreStatutArticles?'actif':''}" data-filtre-statut="${echapper(s)}">${echapper(s)}</button>`).join('');
+    refs.filtresStatutArticles.querySelectorAll('[data-filtre-statut]').forEach(b => b.addEventListener('click', () => { filtreStatutArticles = b.dataset.filtreStatut; rafraichirVueArticles(); }));
+  }
   refs.filtresBlogArticles.querySelectorAll('[data-filtre-blog]').forEach(b => b.addEventListener('click', () => { filtreBlogArticles = b.dataset.filtreBlog; rafraichirVueArticles(); }));
-  refs.filtresStatutArticles.querySelectorAll('[data-filtre-statut]').forEach(b => b.addEventListener('click', () => { filtreStatutArticles = b.dataset.filtreStatut; rafraichirVueArticles(); }));
 }
 function obtenirArticlesFiltres() {
   let articles = Storage.getArticles();
@@ -2272,7 +2282,8 @@ function rafraichirVueArticles() {
   construireFiltresArticles();
   const blogs = Object.fromEntries(Storage.getBlogs().map(b => [b.id, b]));
   const articles = obtenirArticlesFiltres();
-  refs.etatVideArticles.hidden = articles.length > 0;
+  if (refs.etatVideArticles) refs.etatVideArticles.hidden = articles.length > 0;
+  if (!refs.listeArticlesAdmin) return;
   refs.listeArticlesAdmin.innerHTML = articles.map(a => {
     const blog = blogs[a.blogId];
     return `<article class="carte-article-admin vue-${vueArticlesAdmin}">
@@ -2287,49 +2298,49 @@ function rafraichirVueArticles() {
   refs.listeArticlesAdmin.querySelectorAll('[data-modifier-article]').forEach(b => b.addEventListener('click', () => ouvrirModaleEditeurModification(b.dataset.modifierArticle)));
   refs.listeArticlesAdmin.querySelectorAll('[data-supprimer-article]').forEach(b => b.addEventListener('click', () => demanderSuppressionArticle(b.dataset.supprimerArticle)));
 }
-refs.btnNouvelArticle.addEventListener('click', () => {
+refs.btnNouvelArticle?.addEventListener('click', () => {
   if (Storage.getBlogs().length === 0) { afficherBanniereKiosque('Créez d\'abord une publication.', '#CC1533'); return; }
   ouvrirModaleEditeurCreation();
 });
 
 // Détail article
-function fermerMenuPlus() { refs.menuPlusDetail.classList.remove('ouvert'); refs.btnPlusDetail.setAttribute('aria-expanded','false'); }
-refs.btnPlusDetail.addEventListener('click', (e) => { e.stopPropagation(); const o = refs.menuPlusDetail.classList.toggle('ouvert'); refs.btnPlusDetail.setAttribute('aria-expanded',String(o)); });
-document.addEventListener('click', (e) => { if(!refs.menuPlusDetail.contains(e.target)) fermerMenuPlus(); });
+function fermerMenuPlus() { if (refs.menuPlusDetail) refs.menuPlusDetail.classList.remove('ouvert'); if (refs.btnPlusDetail) refs.btnPlusDetail.setAttribute('aria-expanded','false'); }
+refs.btnPlusDetail?.addEventListener('click', (e) => { e.stopPropagation(); const o = refs.menuPlusDetail.classList.toggle('ouvert'); refs.btnPlusDetail.setAttribute('aria-expanded',String(o)); });
+document.addEventListener('click', (e) => { if(!refs.menuPlusDetail?.contains(e.target)) fermerMenuPlus(); });
 function construireMenuPlus(article) {
+  if (!refs.listeMenuPlus) return;
   const autres = Storage.STATUTS.filter(s => s !== article.statut);
   const bloc = autres.map(s => `<button data-statut-rapide="${echapper(s)}">Marquer « ${echapper(s)} »</button>`).join('');
   refs.listeMenuPlus.innerHTML = `<div class="etiquette-menu">Changer le statut</div>${bloc}<div class="separateur-menu"></div><button data-action-menu="dupliquer">Dupliquer</button><button data-action-menu="deplacer">Déplacer</button>`;
   refs.listeMenuPlus.querySelectorAll('[data-statut-rapide]').forEach(async b => b.addEventListener('click', async () => { await Storage.setArticleStatut(article.id, b.dataset.statutRapide); fermerMenuPlus(); rendreDetailArticle(article.id); rafraichirTout(); }));
-  refs.listeMenuPlus.querySelector('[data-action-menu="dupliquer"]').addEventListener('click', async () => { fermerMenuPlus(); await dupliquerArticle(article.id); });
-  refs.listeMenuPlus.querySelector('[data-action-menu="deplacer"]').addEventListener('click', () => { fermerMenuPlus(); ouvrirModaleDeplacer(article.id); });
+  refs.listeMenuPlus.querySelector('[data-action-menu="dupliquer"]')?.addEventListener('click', async () => { fermerMenuPlus(); await dupliquerArticle(article.id); });
+  refs.listeMenuPlus.querySelector('[data-action-menu="deplacer"]')?.addEventListener('click', () => { fermerMenuPlus(); ouvrirModaleDeplacer(article.id); });
 }
 function rendreDetailArticle(id) {
   const a = Storage.getArticleById(id);
   if (!a) { changerVue('articles'); return; }
   const blog = Storage.getBlogById(a.blogId);
   const pieces = Array.isArray(a.pieceJointes) ? a.pieceJointes : [];
-  refs.detailTitre.textContent = a.titre;
-  refs.detailTampon.textContent = a.statut;
-  refs.detailTampon.dataset.statut = a.statut;
-  refs.detailMeta.innerHTML = (blog?echapper(blog.titre):'Publication supprimée')+' · Par '+echapper(a.auteur)+'<br><span>Créé '+formaterDateCourte(a.dateCreation)+'</span><br><span>Modifié '+formaterDateCourte(a.dateModification)+'</span>';
-  if (a.image) { refs.detailIllustration.hidden = false; refs.detailIllustrationImg.src = a.image; } else { refs.detailIllustration.hidden = true; refs.detailIllustrationImg.src = ''; }
-  refs.detailResume.textContent = a.resume || 'Pas de résumé.';
-  refs.detailContenu.innerHTML = a.contenu || '<p><em>Pas de contenu.</em></p>';
-  refs.detailPieces.innerHTML = pieces.length ? pieces.map(p => `<a href="${p.donnees}" download="${echapper(p.nom)}">📄 ${echapper(p.nom)}</a>`).join('') : '';
+  if (refs.detailTitre) refs.detailTitre.textContent = a.titre;
+  if (refs.detailTampon) { refs.detailTampon.textContent = a.statut; refs.detailTampon.dataset.statut = a.statut; }
+  if (refs.detailMeta) refs.detailMeta.innerHTML = (blog?echapper(blog.titre):'Publication supprimée')+' · Par '+echapper(a.auteur)+'<br><span>Créé '+formaterDateCourte(a.dateCreation)+'</span><br><span>Modifié '+formaterDateCourte(a.dateModification)+'</span>';
+  if (a.image) { if (refs.detailIllustration) refs.detailIllustration.hidden = false; if (refs.detailIllustrationImg) refs.detailIllustrationImg.src = a.image; } else { if (refs.detailIllustration) refs.detailIllustration.hidden = true; if (refs.detailIllustrationImg) refs.detailIllustrationImg.src = ''; }
+  if (refs.detailResume) refs.detailResume.textContent = a.resume || 'Pas de résumé.';
+  if (refs.detailContenu) refs.detailContenu.innerHTML = a.contenu || '<p><em>Pas de contenu.</em></p>';
+  if (refs.detailPieces) refs.detailPieces.innerHTML = pieces.length ? pieces.map(p => `<a href="${p.donnees}" download="${echapper(p.nom)}">📄 ${echapper(p.nom)}</a>`).join('') : '';
   construireMenuPlus(a);
-  refs.btnSupprimerDetail.onclick = () => demanderSuppressionArticle(a.id, true);
-  refs.btnModifierDetail.onclick = () => ouvrirModaleEditeurModification(a.id);
+  if (refs.btnSupprimerDetail) refs.btnSupprimerDetail.onclick = () => demanderSuppressionArticle(a.id, true);
+  if (refs.btnModifierDetail) refs.btnModifierDetail.onclick = () => ouvrirModaleEditeurModification(a.id);
 }
 function ouvrirDetailArticle(id) { articleDetailId = id; changerVue('detail-article'); rendreDetailArticle(id); }
-refs.lienRetourArticles.addEventListener('click', (e) => { e.preventDefault(); changerVue('articles'); });
+refs.lienRetourArticles?.addEventListener('click', (e) => { e.preventDefault(); changerVue('articles'); });
 
 function demanderSuppressionArticle(id, depuisDetail) {
   const a = Storage.getArticleById(id);
   if (!a) return;
-  refs.texteModaleConfirmation.textContent = 'Supprimer l\'article « '+a.titre+' » ?';
+  if (refs.texteModaleConfirmation) refs.texteModaleConfirmation.textContent = 'Supprimer l\'article « '+a.titre+' » ?';
   ouvrirModale('modale-confirmation-fond');
-  refs.btnConfirmerSuppression.onclick = async () => {
+  if (refs.btnConfirmerSuppression) refs.btnConfirmerSuppression.onclick = async () => {
     await Storage.deleteArticle(id);
     effacerAutosauvegarde(id);
     fermerModale('modale-confirmation-fond');
@@ -2349,9 +2360,9 @@ function ouvrirModaleDeplacer(id) {
   if (!a) return;
   const autres = Storage.getBlogs().filter(b => b.id !== a.blogId);
   if (autres.length === 0) { afficherBanniereKiosque('Aucune autre publication.', '#7A9DD4'); return; }
-  refs.deplacerBlogSelect.innerHTML = autres.map(b => `<option value="${b.id}">${echapper(b.titre)}</option>`).join('');
+  if (refs.deplacerBlogSelect) refs.deplacerBlogSelect.innerHTML = autres.map(b => `<option value="${b.id}">${echapper(b.titre)}</option>`).join('');
   ouvrirModale('modale-deplacer-fond');
-  refs.btnConfirmerDeplacement.onclick = async () => {
+  if (refs.btnConfirmerDeplacement) refs.btnConfirmerDeplacement.onclick = async () => {
     await Storage.updateArticle(id, { blogId: refs.deplacerBlogSelect.value });
     fermerModale('modale-deplacer-fond');
     afficherBanniereKiosque('Article déplacé.', '#1A7A40');
@@ -2365,25 +2376,28 @@ const LIMITE_CARACTERES_CONTENU = 65000;
 let quill;
 function initQuill() {
   if (typeof Quill !== 'undefined' && !quill) {
-    quill = new Quill('#editeur-riche', {
-      theme: 'snow',
-      placeholder: "Le corps de l'article…",
-      modules: {
-        toolbar: [
-          ['bold','italic','underline','strike'],
-          [{ header: [1,2,3,false] }],
-          [{ align: [] }],
-          [{ list:'ordered' }, { list:'bullet' }],
-          [{ indent:'-1' }, { indent:'+1' }],
-          [{ script:'sub' }, { script:'super' }],
-          [{ color:[] }, { background:[] }],
-          ['blockquote','code-block'],
-          ['link','image','video'],
-          ['clean']
-        ]
-      }
-    });
-    quill.on('text-change', () => { rafraichirCompteurContenu(); sauvegarderAutosaveDifferee(); });
+    const container = document.getElementById('editeur-riche');
+    if (container) {
+      quill = new Quill('#editeur-riche', {
+        theme: 'snow',
+        placeholder: "Le corps de l'article…",
+        modules: {
+          toolbar: [
+            ['bold','italic','underline','strike'],
+            [{ header: [1,2,3,false] }],
+            [{ align: [] }],
+            [{ list:'ordered' }, { list:'bullet' }],
+            [{ indent:'-1' }, { indent:'+1' }],
+            [{ script:'sub' }, { script:'super' }],
+            [{ color:[] }, { background:[] }],
+            ['blockquote','code-block'],
+            ['link','image','video'],
+            ['clean']
+          ]
+        }
+      });
+      quill.on('text-change', () => { rafraichirCompteurContenu(); sauvegarderAutosaveDifferee(); });
+    }
   }
 }
 function rafraichirCompteurContenu() {
@@ -2391,11 +2405,12 @@ function rafraichirCompteurContenu() {
   const txt = quill.getText().trim();
   const mots = txt.length ? txt.split(/\s+/).filter(Boolean).length : 0;
   const chars = quill.root.innerHTML.length;
-  refs.compteurContenu.textContent = 'Mots : '+mots+', Caractères : '+chars+' / '+LIMITE_CARACTERES_CONTENU;
-  refs.compteurContenu.classList.toggle('alerte', chars > LIMITE_CARACTERES_CONTENU);
+  if (refs.compteurContenu) refs.compteurContenu.textContent = 'Mots : '+mots+', Caractères : '+chars+' / '+LIMITE_CARACTERES_CONTENU;
+  if (refs.compteurContenu) refs.compteurContenu.classList.toggle('alerte', chars > LIMITE_CARACTERES_CONTENU);
 }
 function rafraichirCompteurResume() {
-  const l = refs.champResume.value.length;
+  if (!refs.compteurResume) return;
+  const l = refs.champResume?.value.length || 0;
   refs.compteurResume.textContent = l + ' / 250 caractères';
   refs.compteurResume.classList.toggle('alerte', l >= 250);
 }
@@ -2405,13 +2420,13 @@ const TAILLE_MAX_ILLUSTRATION = 1024*1024;
 let illustrationActuelle = null;
 function afficherIllustration() {
   if (illustrationActuelle) {
-    refs.zoneDepotIllustration.hidden = true;
-    refs.previsualisationIllustration.hidden = false;
-    refs.imgPrevisualisationIllustration.src = illustrationActuelle;
+    if (refs.zoneDepotIllustration) refs.zoneDepotIllustration.hidden = true;
+    if (refs.previsualisationIllustration) refs.previsualisationIllustration.hidden = false;
+    if (refs.imgPrevisualisationIllustration) refs.imgPrevisualisationIllustration.src = illustrationActuelle;
   } else {
-    refs.zoneDepotIllustration.hidden = false;
-    refs.previsualisationIllustration.hidden = true;
-    refs.imgPrevisualisationIllustration.src = '';
+    if (refs.zoneDepotIllustration) refs.zoneDepotIllustration.hidden = false;
+    if (refs.previsualisationIllustration) refs.previsualisationIllustration.hidden = true;
+    if (refs.imgPrevisualisationIllustration) refs.imgPrevisualisationIllustration.src = '';
   }
 }
 async function gererFichiersIllustration(files) {
@@ -2421,19 +2436,20 @@ async function gererFichiersIllustration(files) {
   if (f.size > TAILLE_MAX_ILLUSTRATION) { afficherBanniereKiosque('Image > 1 Mo.', '#CC1533'); return; }
   try { illustrationActuelle = await lireFichierEnBase64(f); afficherIllustration(); sauvegarderAutosave(); } catch { afficherBanniereKiosque("Impossible de lire l'image.", '#CC1533'); }
 }
-refs.btnChoisirIllustration.addEventListener('click', () => refs.champIllustration.click());
-refs.zoneDepotIllustration.addEventListener('click', (e) => { if (e.target !== refs.btnChoisirIllustration) refs.champIllustration.click(); });
-refs.zoneDepotIllustration.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); refs.champIllustration.click(); } });
-refs.champIllustration.addEventListener('change', () => gererFichiersIllustration(refs.champIllustration.files));
-['dragover','dragenter'].forEach(ev => refs.zoneDepotIllustration.addEventListener(ev, (e) => { e.preventDefault(); refs.zoneDepotIllustration.classList.add('survol'); }));
-['dragleave','dragend'].forEach(ev => refs.zoneDepotIllustration.addEventListener(ev, () => refs.zoneDepotIllustration.classList.remove('survol')));
-refs.zoneDepotIllustration.addEventListener('drop', (e) => { e.preventDefault(); refs.zoneDepotIllustration.classList.remove('survol'); gererFichiersIllustration(e.dataTransfer.files); });
-refs.btnRetirerIllustration.addEventListener('click', () => { illustrationActuelle = null; afficherIllustration(); sauvegarderAutosave(); });
+refs.btnChoisirIllustration?.addEventListener('click', () => refs.champIllustration?.click());
+refs.zoneDepotIllustration?.addEventListener('click', (e) => { if (e.target !== refs.btnChoisirIllustration) refs.champIllustration?.click(); });
+refs.zoneDepotIllustration?.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); refs.champIllustration?.click(); } });
+refs.champIllustration?.addEventListener('change', () => gererFichiersIllustration(refs.champIllustration.files));
+['dragover','dragenter'].forEach(ev => refs.zoneDepotIllustration?.addEventListener(ev, (e) => { e.preventDefault(); refs.zoneDepotIllustration.classList.add('survol'); }));
+['dragleave','dragend'].forEach(ev => refs.zoneDepotIllustration?.addEventListener(ev, () => refs.zoneDepotIllustration.classList.remove('survol')));
+refs.zoneDepotIllustration?.addEventListener('drop', (e) => { e.preventDefault(); refs.zoneDepotIllustration.classList.remove('survol'); gererFichiersIllustration(e.dataTransfer.files); });
+refs.btnRetirerIllustration?.addEventListener('click', () => { illustrationActuelle = null; afficherIllustration(); sauvegarderAutosave(); });
 
 // Pièces jointes
 const NB_PIECES_MAX = 3, TAILLE_MAX_PIECE = 1024*1024, TAILLE_MAX_TOTAL = 3*1024*1024;
 let piecesJointesActuelles = [];
 function rendrePiecesJointes() {
+  if (!refs.listePiecesJointes) return;
   if (piecesJointesActuelles.length === 0) { refs.listePiecesJointes.innerHTML = ''; return; }
   refs.listePiecesJointes.innerHTML = piecesJointesActuelles.map(p => `<li class="piece-jointe"><span class="icone-fichier">📄</span><span class="nom-fichier">${echapper(p.nom)}</span><span class="taille-fichier">${formaterTaille(p.taille)}</span><button class="btn-retirer-fichier" data-retirer-piece="${p.id}">×</button></li>`).join('');
   refs.listePiecesJointes.querySelectorAll('[data-retirer-piece]').forEach(b => b.addEventListener('click', () => { piecesJointesActuelles = piecesJointesActuelles.filter(x => x.id !== b.dataset.retirerPiece); rendrePiecesJointes(); sauvegarderAutosave(); }));
@@ -2455,94 +2471,98 @@ function formaterTaille(octets) {
   if (octets < 1024*1024) return Math.max(1, Math.round(octets/1024)) + ' Ko';
   return (octets/(1024*1024)).toFixed(1) + ' Mo';
 }
-refs.btnChoisirPieces.addEventListener('click', () => refs.champPieces.click());
-refs.zoneDepotPieces.addEventListener('click', (e) => { if (e.target !== refs.btnChoisirPieces) refs.champPieces.click(); });
-refs.zoneDepotPieces.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); refs.champPieces.click(); } });
-refs.champPieces.addEventListener('change', () => { gererFichiersPieces(refs.champPieces.files); refs.champPieces.value = ''; });
-['dragover','dragenter'].forEach(ev => refs.zoneDepotPieces.addEventListener(ev, (e) => { e.preventDefault(); refs.zoneDepotPieces.classList.add('survol'); }));
-['dragleave','dragend'].forEach(ev => refs.zoneDepotPieces.addEventListener(ev, () => refs.zoneDepotPieces.classList.remove('survol')));
-refs.zoneDepotPieces.addEventListener('drop', (e) => { e.preventDefault(); refs.zoneDepotPieces.classList.remove('survol'); gererFichiersPieces(e.dataTransfer.files); });
+refs.btnChoisirPieces?.addEventListener('click', () => refs.champPieces?.click());
+refs.zoneDepotPieces?.addEventListener('click', (e) => { if (e.target !== refs.btnChoisirPieces) refs.champPieces?.click(); });
+refs.zoneDepotPieces?.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); refs.champPieces?.click(); } });
+refs.champPieces?.addEventListener('change', () => { gererFichiersPieces(refs.champPieces.files); refs.champPieces.value = ''; });
+['dragover','dragenter'].forEach(ev => refs.zoneDepotPieces?.addEventListener(ev, (e) => { e.preventDefault(); refs.zoneDepotPieces.classList.add('survol'); }));
+['dragleave','dragend'].forEach(ev => refs.zoneDepotPieces?.addEventListener(ev, () => refs.zoneDepotPieces.classList.remove('survol')));
+refs.zoneDepotPieces?.addEventListener('drop', (e) => { e.preventDefault(); refs.zoneDepotPieces.classList.remove('survol'); gererFichiersPieces(e.dataTransfer.files); });
 
 // Auto-sauvegarde
 const PREFIXE_AUTOSAVE = 'kiosque_brouillon_editeur_';
 let articleEnCoursId = null, auteurArticleEnCours = '';
 function cleAutosave(id) { return PREFIXE_AUTOSAVE + (id || 'nouveau'); }
 function sauvegarderAutosave() {
-  const b = { blogId: refs.articleBlog.value, titre: refs.champTitre.value, resume: refs.champResume.value, auteur: auteurArticleEnCours, contenu: quill? quill.root.innerHTML : '', image: illustrationActuelle, pieceJointes: piecesJointesActuelles, horodatage: Storage.now() };
-  try { zoneStockage.setItem(cleAutosave(articleEnCoursId), JSON.stringify(b)); refs.indicateurSauvegarde.textContent = 'Brouillon enregistré'; refs.indicateurSauvegarde.classList.add('visible'); clearTimeout(refs.indicateurSauvegarde._timer); refs.indicateurSauvegarde._timer = setTimeout(() => refs.indicateurSauvegarde.classList.remove('visible'), 1800); } catch(e) { console.warn('Auto-save error', e); }
+  const b = { blogId: refs.articleBlog?.value || '', titre: refs.champTitre?.value || '', resume: refs.champResume?.value || '', auteur: auteurArticleEnCours, contenu: quill? quill.root.innerHTML : '', image: illustrationActuelle, pieceJointes: piecesJointesActuelles, horodatage: Storage.now() };
+  try { zoneStockage.setItem(cleAutosave(articleEnCoursId), JSON.stringify(b)); if (refs.indicateurSauvegarde) { refs.indicateurSauvegarde.textContent = 'Brouillon enregistré'; refs.indicateurSauvegarde.classList.add('visible'); clearTimeout(refs.indicateurSauvegarde._timer); refs.indicateurSauvegarde._timer = setTimeout(() => refs.indicateurSauvegarde.classList.remove('visible'), 1800); } } catch(e) { console.warn('Auto-save error', e); }
 }
 function lireAutosave(id) { try { const raw = zoneStockage.getItem(cleAutosave(id)); return raw ? JSON.parse(raw) : null; } catch { return null; } }
 function effacerAutosauvegarde(id) { zoneStockage.removeItem(cleAutosave(id)); }
 const sauvegarderAutosaveDifferee = debouncer(sauvegarderAutosave, 600);
 
 function remplirSelectBlogs(selected) {
+  if (!refs.articleBlog) return;
   const blogs = Storage.getBlogs();
   refs.articleBlog.innerHTML = blogs.map(b => `<option value="${b.id}">${echapper(b.titre)}</option>`).join('');
   if (selected) refs.articleBlog.value = selected;
 }
 function viderFormulaireEditeur() {
-  refs.formEditeur.reset(); refs.articleId.value = ''; if (quill) quill.setText(''); illustrationActuelle = null; piecesJointesActuelles = []; afficherIllustration(); rendrePiecesJointes(); rafraichirCompteurContenu(); rafraichirCompteurResume();
+  if (refs.formEditeur) refs.formEditeur.reset();
+  if (refs.articleId) refs.articleId.value = '';
+  if (quill) quill.setText('');
+  illustrationActuelle = null;
+  piecesJointesActuelles = [];
+  afficherIllustration(); rendrePiecesJointes(); rafraichirCompteurContenu(); rafraichirCompteurResume();
 }
 function ouvrirModaleEditeurCreation() {
-  articleEnCoursId = null; viderFormulaireEditeur(); refs.titreModaleEditeur.textContent = 'Nouvel article'; refs.btnSupprimerArticle.hidden = true;
+  articleEnCoursId = null; viderFormulaireEditeur(); if (refs.titreModaleEditeur) refs.titreModaleEditeur.textContent = 'Nouvel article'; if (refs.btnSupprimerArticle) refs.btnSupprimerArticle.hidden = true;
   const preselected = Storage.getBlogs().find(b => b.titre === filtreBlogArticles);
   remplirSelectBlogs(preselected ? preselected.id : null);
   auteurArticleEnCours = Auth.getCurrentUser()?.nom || 'Anonyme';
-  refs.articleAuteurAffiche.textContent = auteurArticleEnCours;
+  if (refs.articleAuteurAffiche) refs.articleAuteurAffiche.textContent = auteurArticleEnCours;
   const auto = lireAutosave(null);
   if (auto) {
-    refs.articleBlog.value = auto.blogId || refs.articleBlog.value;
-    refs.champTitre.value = auto.titre || '';
-    refs.champResume.value = auto.resume || '';
+    if (refs.articleBlog) refs.articleBlog.value = auto.blogId || refs.articleBlog.value;
+    if (refs.champTitre) refs.champTitre.value = auto.titre || '';
+    if (refs.champResume) refs.champResume.value = auto.resume || '';
     if (quill) quill.root.innerHTML = auto.contenu || '';
     illustrationActuelle = auto.image || null;
     piecesJointesActuelles = Array.isArray(auto.pieceJointes) ? auto.pieceJointes : [];
     afficherIllustration(); rendrePiecesJointes(); rafraichirCompteurContenu(); rafraichirCompteurResume();
-    refs.indicateurSauvegarde.textContent = 'Brouillon local restauré';
-    refs.indicateurSauvegarde.classList.add('visible');
+    if (refs.indicateurSauvegarde) { refs.indicateurSauvegarde.textContent = 'Brouillon local restauré'; refs.indicateurSauvegarde.classList.add('visible'); }
   }
-  ouvrirModale('modale-editeur-fond'); refs.champTitre.focus();
+  ouvrirModale('modale-editeur-fond'); if (refs.champTitre) refs.champTitre.focus();
 }
 function ouvrirModaleEditeurModification(id) {
   const a = Storage.getArticleById(id);
   if (!a) return;
-  articleEnCoursId = a.id; viderFormulaireEditeur(); refs.titreModaleEditeur.textContent = 'Modifier l\'article'; refs.btnSupprimerArticle.hidden = false; refs.articleId.value = a.id;
+  articleEnCoursId = a.id; viderFormulaireEditeur(); if (refs.titreModaleEditeur) refs.titreModaleEditeur.textContent = 'Modifier l\'article'; if (refs.btnSupprimerArticle) refs.btnSupprimerArticle.hidden = false; if (refs.articleId) refs.articleId.value = a.id;
   remplirSelectBlogs(a.blogId);
-  refs.champTitre.value = a.titre;
-  refs.champResume.value = a.resume;
+  if (refs.champTitre) refs.champTitre.value = a.titre;
+  if (refs.champResume) refs.champResume.value = a.resume;
   if (quill) quill.root.innerHTML = a.contenu || '';
   illustrationActuelle = a.image || null;
   piecesJointesActuelles = Array.isArray(a.pieceJointes) ? [...a.pieceJointes] : [];
   auteurArticleEnCours = a.auteur;
-  refs.articleAuteurAffiche.textContent = auteurArticleEnCours;
+  if (refs.articleAuteurAffiche) refs.articleAuteurAffiche.textContent = auteurArticleEnCours;
   afficherIllustration(); rendrePiecesJointes(); rafraichirCompteurContenu(); rafraichirCompteurResume();
   const auto = lireAutosave(a.id);
   if (auto && new Date(auto.horodatage) > new Date(a.dateModification)) {
-    refs.articleBlog.value = auto.blogId || refs.articleBlog.value;
-    refs.champTitre.value = auto.titre;
-    refs.champResume.value = auto.resume;
+    if (refs.articleBlog) refs.articleBlog.value = auto.blogId || refs.articleBlog.value;
+    if (refs.champTitre) refs.champTitre.value = auto.titre;
+    if (refs.champResume) refs.champResume.value = auto.resume;
     if (quill) quill.root.innerHTML = auto.contenu || '';
     illustrationActuelle = auto.image || null;
     piecesJointesActuelles = Array.isArray(auto.pieceJointes) ? auto.pieceJointes : [];
     afficherIllustration(); rendrePiecesJointes(); rafraichirCompteurContenu(); rafraichirCompteurResume();
-    refs.indicateurSauvegarde.textContent = 'Brouillon local restauré';
-    refs.indicateurSauvegarde.classList.add('visible');
+    if (refs.indicateurSauvegarde) { refs.indicateurSauvegarde.textContent = 'Brouillon local restauré'; refs.indicateurSauvegarde.classList.add('visible'); }
   }
-  ouvrirModale('modale-editeur-fond'); refs.champTitre.focus();
+  ouvrirModale('modale-editeur-fond'); if (refs.champTitre) refs.champTitre.focus();
 }
-[refs.champTitre, refs.articleBlog].forEach(el => el.addEventListener('input', sauvegarderAutosaveDifferee));
-refs.champResume.addEventListener('input', () => { rafraichirCompteurResume(); sauvegarderAutosaveDifferee(); });
-refs.formEditeur.addEventListener('submit', e => e.preventDefault());
+[refs.champTitre, refs.articleBlog].forEach(el => el?.addEventListener('input', sauvegarderAutosaveDifferee));
+refs.champResume?.addEventListener('input', () => { rafraichirCompteurResume(); sauvegarderAutosaveDifferee(); });
+refs.formEditeur?.addEventListener('submit', e => e.preventDefault());
 function lireChampsEditeur() {
-  return { blogId: refs.articleBlog.value, titre: refs.champTitre.value, resume: refs.champResume.value, auteur: auteurArticleEnCours, contenu: quill ? quill.root.innerHTML : '', image: illustrationActuelle, pieceJointes: piecesJointesActuelles };
+  return { blogId: refs.articleBlog?.value || '', titre: refs.champTitre?.value || '', resume: refs.champResume?.value || '', auteur: auteurArticleEnCours, contenu: quill ? quill.root.innerHTML : '', image: illustrationActuelle, pieceJointes: piecesJointesActuelles };
 }
 async function enregistrerArticleEditeur(statut) {
   const data = lireChampsEditeur();
-  if (!data.titre.trim()) { refs.champTitre.focus(); return; }
+  if (!data.titre.trim()) { if (refs.champTitre) refs.champTitre.focus(); return; }
   if (!data.blogId) { afficherBanniereKiosque('Sélectionnez une publication.', '#CC1533'); return; }
   const boutons = [refs.btnEnregistrerBrouillon, refs.btnPublierArticle];
-  const orig = boutons.map(b => b.textContent);
-  boutons.forEach(b => { b.disabled = true; b.textContent = 'Enregistrement…'; });
+  const orig = boutons.map(b => b?.textContent || '');
+  boutons.forEach(b => { if (b) { b.disabled = true; b.textContent = 'Enregistrement…'; } });
   try {
     if (articleEnCoursId) await Storage.updateArticle(articleEnCoursId, { ...data, statut });
     else { const newArt = await Storage.createArticle({ ...data, statut }); articleEnCoursId = newArt.id; }
@@ -2550,16 +2570,16 @@ async function enregistrerArticleEditeur(statut) {
     fermerModale('modale-editeur-fond'); rafraichirTout();
     afficherBanniereKiosque('Article enregistré.', '#1A7A40');
   } catch(err) { console.error(err); afficherBanniereKiosque('Erreur réseau : '+(err.message||'vérifiez votre connexion.'), '#CC1533'); }
-  finally { boutons.forEach((b,i) => { b.disabled = false; b.textContent = orig[i]; }); }
+  finally { boutons.forEach((b,i) => { if (b) { b.disabled = false; b.textContent = orig[i] || ''; } }); }
 }
-refs.btnEnregistrerBrouillon.addEventListener('click', () => enregistrerArticleEditeur('Brouillon'));
-refs.btnPublierArticle.addEventListener('click', () => enregistrerArticleEditeur('En ligne'));
-refs.btnSupprimerArticle.addEventListener('click', () => {
+refs.btnEnregistrerBrouillon?.addEventListener('click', () => enregistrerArticleEditeur('Brouillon'));
+refs.btnPublierArticle?.addEventListener('click', () => enregistrerArticleEditeur('En ligne'));
+refs.btnSupprimerArticle?.addEventListener('click', () => {
   if (!articleEnCoursId) return;
   const a = Storage.getArticleById(articleEnCoursId);
-  refs.texteModaleConfirmation.textContent = 'Supprimer l\'article « '+(a?.titre||'')+' » ?';
+  if (refs.texteModaleConfirmation) refs.texteModaleConfirmation.textContent = 'Supprimer l\'article « '+(a?.titre||'')+' » ?';
   ouvrirModale('modale-confirmation-fond');
-  refs.btnConfirmerSuppression.onclick = async () => {
+  if (refs.btnConfirmerSuppression) refs.btnConfirmerSuppression.onclick = async () => {
     await Storage.deleteArticle(articleEnCoursId);
     effacerAutosauvegarde(articleEnCoursId);
     fermerModale('modale-confirmation-fond');
@@ -2572,34 +2592,63 @@ refs.btnSupprimerArticle.addEventListener('click', () => {
 function rafraichirVueComptes() {
   const users = Storage.getUsers();
   const session = Auth.getCurrentUser();
+  if (!refs.corpsTableComptes) return;
   refs.corpsTableComptes.innerHTML = users.map(u => `<tr><td class="titre-cellule">${echapper(u.username)}${session && session.userId === u.id ? ' <span class="etiquette-vous">(vous)</span>' : ''}</td><td>${echapper(u.nom)}</td><td><span class="badge-role role-${u.role}">Administrateur</span></td><td class="meta-cellule">${u.ddn ? echapper(u.ddn) : '<span style="color:var(--rust);font-size:0.75rem;">Non renseignée</span>'}</td><td><div class="actions-cellule"><button class="btn btn-fantome btn-petit" data-modifier-compte="${u.id}">Modifier</button><button class="btn btn-danger btn-petit" data-supprimer-compte="${u.id}">Supprimer</button></div></td></tr>`).join('');
   refs.corpsTableComptes.querySelectorAll('[data-modifier-compte]').forEach(b => b.addEventListener('click', () => ouvrirModaleCompteModification(b.dataset.modifierCompte)));
   refs.corpsTableComptes.querySelectorAll('[data-supprimer-compte]').forEach(b => b.addEventListener('click', () => demanderSuppressionCompte(b.dataset.supprimerCompte)));
 }
-function masquerErreurUtilisateur() { refs.messageErreurUtilisateur.classList.remove('visible'); refs.messageErreurUtilisateur.textContent = ''; }
+function masquerErreurUtilisateur() { if (refs.messageErreurUtilisateur) { refs.messageErreurUtilisateur.classList.remove('visible'); refs.messageErreurUtilisateur.textContent = ''; } }
 function ouvrirModaleCompteCreation() {
-  refs.titreModaleUtilisateur.textContent = 'Nouveau compte'; refs.formUtilisateur.reset(); refs.utilisateurId.value = ''; refs.utilisateurRole.value = 'admin'; refs.aideMotdepasseUtilisateur.textContent = 'Obligatoire, 4 caractères min.'; refs.btnSupprimerCompte.hidden = true; if (refs.utilisateurDdn) refs.utilisateurDdn.value = ''; masquerErreurUtilisateur(); ouvrirModale('modale-utilisateur-fond'); refs.utilisateurIdentifiant.focus();
+  if (refs.titreModaleUtilisateur) refs.titreModaleUtilisateur.textContent = 'Nouveau compte';
+  if (refs.formUtilisateur) refs.formUtilisateur.reset();
+  if (refs.utilisateurId) refs.utilisateurId.value = '';
+  if (refs.utilisateurRole) refs.utilisateurRole.value = 'admin';
+  if (refs.aideMotdepasseUtilisateur) refs.aideMotdepasseUtilisateur.textContent = 'Obligatoire, 4 caractères min.';
+  if (refs.btnSupprimerCompte) refs.btnSupprimerCompte.hidden = true;
+  if (refs.utilisateurDdn) refs.utilisateurDdn.value = '';
+  masquerErreurUtilisateur();
+  ouvrirModale('modale-utilisateur-fond');
+  if (refs.utilisateurIdentifiant) refs.utilisateurIdentifiant.focus();
 }
 function ouvrirModaleCompteModification(id) {
-  const u = Storage.getUserById(id); if (!u) return;
-  refs.titreModaleUtilisateur.textContent = 'Modifier le compte'; refs.utilisateurId.value = u.id; refs.utilisateurIdentifiant.value = u.username; refs.utilisateurNom.value = u.nom; refs.utilisateurRole.value = u.role; refs.utilisateurMotdepasse.value = ''; if (refs.utilisateurDdn) refs.utilisateurDdn.value = u.ddn||''; refs.aideMotdepasseUtilisateur.textContent = 'Laisser vide pour ne pas modifier le mot de passe.'; const session = Auth.getCurrentUser(); refs.btnSupprimerCompte.hidden = !!(session && session.userId === id); masquerErreurUtilisateur(); ouvrirModale('modale-utilisateur-fond'); refs.utilisateurIdentifiant.focus();
+  const u = Storage.getUserById(id);
+  if (!u) return;
+  if (refs.titreModaleUtilisateur) refs.titreModaleUtilisateur.textContent = 'Modifier le compte';
+  if (refs.utilisateurId) refs.utilisateurId.value = u.id;
+  if (refs.utilisateurIdentifiant) refs.utilisateurIdentifiant.value = u.username;
+  if (refs.utilisateurNom) refs.utilisateurNom.value = u.nom;
+  if (refs.utilisateurRole) refs.utilisateurRole.value = u.role;
+  if (refs.utilisateurMotdepasse) refs.utilisateurMotdepasse.value = '';
+  if (refs.utilisateurDdn) refs.utilisateurDdn.value = u.ddn||'';
+  if (refs.aideMotdepasseUtilisateur) refs.aideMotdepasseUtilisateur.textContent = 'Laisser vide pour ne pas modifier le mot de passe.';
+  const session = Auth.getCurrentUser();
+  if (refs.btnSupprimerCompte) refs.btnSupprimerCompte.hidden = !!(session && session.userId === id);
+  masquerErreurUtilisateur();
+  ouvrirModale('modale-utilisateur-fond');
+  if (refs.utilisateurIdentifiant) refs.utilisateurIdentifiant.focus();
 }
-refs.btnNouveauCompte.addEventListener('click', ouvrirModaleCompteCreation);
-refs.formUtilisateur.addEventListener('submit', async (e) => {
+refs.btnNouveauCompte?.addEventListener('click', ouvrirModaleCompteCreation);
+refs.formUtilisateur?.addEventListener('submit', async (e) => {
   e.preventDefault(); masquerErreurUtilisateur();
-  const id = refs.utilisateurId.value;
-  const data = { username: refs.utilisateurIdentifiant.value, nom: refs.utilisateurNom.value, role: refs.utilisateurRole.value, password: refs.utilisateurMotdepasse.value, ddn: refs.utilisateurDdn ? refs.utilisateurDdn.value : '' };
+  const id = refs.utilisateurId?.value || '';
+  const data = { username: refs.utilisateurIdentifiant?.value || '', nom: refs.utilisateurNom?.value || '', role: refs.utilisateurRole?.value || 'admin', password: refs.utilisateurMotdepasse?.value || '', ddn: refs.utilisateurDdn?.value || '' };
   try {
     const res = id ? await Storage.updateUser(id, data) : await Storage.createUser(data);
-    if (!res.ok) { refs.messageErreurUtilisateur.textContent = res.erreur; refs.messageErreurUtilisateur.classList.add('visible'); return; }
-    fermerModale('modale-utilisateur-fond'); afficherUtilisateurCourant(); rafraichirVueComptes();
-  } catch(err) { refs.messageErreurUtilisateur.textContent = 'Erreur : '+err.message; refs.messageErreurUtilisateur.classList.add('visible'); }
+    if (!res.ok) { if (refs.messageErreurUtilisateur) { refs.messageErreurUtilisateur.textContent = res.erreur; refs.messageErreurUtilisateur.classList.add('visible'); } return; }
+    fermerModale('modale-utilisateur-fond');
+    // Forcer le rafraîchissement du cache utilisateur
+    const snap = await db.collection('users').get();
+    _cache.users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    afficherUtilisateurCourant();
+    rafraichirVueComptes();
+  } catch(err) { if (refs.messageErreurUtilisateur) { refs.messageErreurUtilisateur.textContent = 'Erreur : '+err.message; refs.messageErreurUtilisateur.classList.add('visible'); } }
 });
 function demanderSuppressionCompte(id) {
-  const u = Storage.getUserById(id); if (!u) return;
-  refs.texteModaleConfirmation.textContent = 'Supprimer le compte « '+u.username+' » ?';
+  const u = Storage.getUserById(id);
+  if (!u) return;
+  if (refs.texteModaleConfirmation) refs.texteModaleConfirmation.textContent = 'Supprimer le compte « '+u.username+' » ?';
   ouvrirModale('modale-confirmation-fond');
-  refs.btnConfirmerSuppression.onclick = async () => {
+  if (refs.btnConfirmerSuppression) refs.btnConfirmerSuppression.onclick = async () => {
     const res = await Storage.deleteUser(id);
     fermerModale('modale-confirmation-fond');
     if (!res.ok) { afficherBanniereKiosque(res.erreur, '#CC1533'); return; }
@@ -2608,25 +2657,26 @@ function demanderSuppressionCompte(id) {
 }
 
 // Profil
-refs.btnMonProfil.addEventListener('click', () => {
+refs.btnMonProfil?.addEventListener('click', () => {
   const s = Auth.getCurrentUser();
   if (!s) return;
-  refs.profilNom.value = s.nom || '';
-  refs.profilMotdepasse.value = '';
-  refs.messageErreurProfil.classList.remove('visible'); refs.messageErreurProfil.textContent = '';
-  ouvrirModale('modale-profil-fond'); refs.profilNom.focus();
+  if (refs.profilNom) refs.profilNom.value = s.nom || '';
+  if (refs.profilMotdepasse) refs.profilMotdepasse.value = '';
+  if (refs.messageErreurProfil) { refs.messageErreurProfil.classList.remove('visible'); refs.messageErreurProfil.textContent = ''; }
+  ouvrirModale('modale-profil-fond');
+  if (refs.profilNom) refs.profilNom.focus();
 });
-refs.formProfil.addEventListener('submit', async (e) => {
+refs.formProfil?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const s = Auth.getCurrentUser();
   if (!s) return;
   const u = Storage.getUserById(s.userId);
   if (!u) return;
   try {
-    const res = await Storage.updateUser(s.userId, { username: u.username, role: u.role, nom: refs.profilNom.value, password: refs.profilMotdepasse.value });
-    if (!res.ok) { refs.messageErreurProfil.textContent = res.erreur; refs.messageErreurProfil.classList.add('visible'); return; }
+    const res = await Storage.updateUser(s.userId, { username: u.username, role: u.role, nom: refs.profilNom?.value || '', password: refs.profilMotdepasse?.value || '' });
+    if (!res.ok) { if (refs.messageErreurProfil) { refs.messageErreurProfil.textContent = res.erreur; refs.messageErreurProfil.classList.add('visible'); } return; }
     fermerModale('modale-profil-fond'); afficherUtilisateurCourant();
-  } catch(err) { refs.messageErreurProfil.textContent = 'Erreur : '+err.message; refs.messageErreurProfil.classList.add('visible'); }
+  } catch(err) { if (refs.messageErreurProfil) { refs.messageErreurProfil.textContent = 'Erreur : '+err.message; refs.messageErreurProfil.classList.add('visible'); } }
 });
 
 // Paramètres
@@ -2711,9 +2761,9 @@ document.getElementById('btn-exporter-donnees')?.addEventListener('click', () =>
   afficherBanniereKiosque('Export JSON téléchargé.', '#1A7A40');
 });
 document.getElementById('btn-reinitialiser-donnees-admin')?.addEventListener('click', () => {
-  refs.texteModaleConfirmation.textContent = 'Réinitialiser toutes les données ?';
+  if (refs.texteModaleConfirmation) refs.texteModaleConfirmation.textContent = 'Réinitialiser toutes les données ?';
   ouvrirModale('modale-confirmation-fond');
-  refs.btnConfirmerSuppression.onclick = async () => {
+  if (refs.btnConfirmerSuppression) refs.btnConfirmerSuppression.onclick = async () => {
     await Storage.reinitialiser();
     fermerModale('modale-confirmation-fond');
     afficherBanniereKiosque('Données réinitialisées.', '#0A3A8C');
@@ -2749,70 +2799,89 @@ function prepareAdminPage() {
   const menu = document.getElementById('menu-superieur');
   if (!menu) return;
   const connecte = Auth.isLoggedIn();
-  document.getElementById('lien-menu-admin').hidden = !connecte;
-  document.getElementById('lien-menu-connexion').hidden = connecte;
-  document.getElementById('btn-menu-deconnexion').hidden = !connecte;
-  document.getElementById('separateur-menu-deconnexion').hidden = !connecte;
+  const lienAdmin = document.getElementById('lien-menu-admin');
+  const lienConnexion = document.getElementById('lien-menu-connexion');
+  const btnDeconnexion = document.getElementById('btn-menu-deconnexion');
+  const sep = document.getElementById('separateur-menu-deconnexion');
+  if (lienAdmin) lienAdmin.hidden = !connecte;
+  if (lienConnexion) lienConnexion.hidden = connecte;
+  if (btnDeconnexion) btnDeconnexion.hidden = !connecte;
+  if (sep) sep.hidden = !connecte;
 
   const btnHamburger = document.getElementById('btn-hamburger');
   const btnCaret = document.getElementById('btn-menu-caret');
   const btnAide = document.getElementById('btn-aide-icone');
   const aidePanel = document.getElementById('panneau-aide');
   function fermerTout() {
-    menu.classList.remove('ouvert');
-    aidePanel.classList.remove('ouvert');
-    btnHamburger?.setAttribute('aria-expanded','false');
-    btnCaret?.setAttribute('aria-expanded','false');
-    btnAide?.setAttribute('aria-expanded','false');
+    if (menu) menu.classList.remove('ouvert');
+    if (aidePanel) aidePanel.classList.remove('ouvert');
+    if (btnHamburger) btnHamburger.setAttribute('aria-expanded','false');
+    if (btnCaret) btnCaret.setAttribute('aria-expanded','false');
+    if (btnAide) btnAide.setAttribute('aria-expanded','false');
   }
   function basculer(panel, bouton) {
+    if (!panel) return;
     const etat = panel.classList.contains('ouvert');
     fermerTout();
-    if (!etat) { panel.classList.add('ouvert'); bouton?.setAttribute('aria-expanded','true'); }
+    if (!etat) { panel.classList.add('ouvert'); if (bouton) bouton.setAttribute('aria-expanded','true'); }
   }
-  btnHamburger?.addEventListener('click', (e) => { e.stopPropagation(); basculer(menu, btnHamburger); });
-  btnCaret?.addEventListener('click', (e) => { e.stopPropagation(); basculer(menu, btnCaret); });
-  btnAide?.addEventListener('click', (e) => { e.stopPropagation(); basculer(aidePanel, btnAide); });
+  if (btnHamburger) btnHamburger.addEventListener('click', (e) => { e.stopPropagation(); basculer(menu, btnHamburger); });
+  if (btnCaret) btnCaret.addEventListener('click', (e) => { e.stopPropagation(); basculer(menu, btnCaret); });
+  if (btnAide) btnAide.addEventListener('click', (e) => { e.stopPropagation(); basculer(aidePanel, btnAide); });
   document.addEventListener('click', fermerTout);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') fermerTout(); });
 })();
 
 // Volet latéral
-document.getElementById('btn-volet-publications').addEventListener('click', () => {
-  document.getElementById('volet-lateral').classList.add('ouvert');
-  document.getElementById('fond-volet').classList.add('visible');
+const btnVolet = document.getElementById('btn-volet-publications');
+const volet = document.getElementById('volet-lateral');
+const fondVolet = document.getElementById('fond-volet');
+const fermerVolet = document.getElementById('fermer-volet');
+if (btnVolet) btnVolet.addEventListener('click', () => {
+  if (volet) volet.classList.add('ouvert');
+  if (fondVolet) fondVolet.classList.add('visible');
   mettreAJourVolet();
 });
-document.getElementById('fermer-volet').addEventListener('click', () => {
-  document.getElementById('volet-lateral').classList.remove('ouvert');
-  document.getElementById('fond-volet').classList.remove('visible');
+if (fermerVolet) fermerVolet.addEventListener('click', () => {
+  if (volet) volet.classList.remove('ouvert');
+  if (fondVolet) fondVolet.classList.remove('visible');
 });
-document.getElementById('fond-volet').addEventListener('click', () => {
-  document.getElementById('volet-lateral').classList.remove('ouvert');
-  document.getElementById('fond-volet').classList.remove('visible');
+if (fondVolet) fondVolet.addEventListener('click', () => {
+  if (volet) volet.classList.remove('ouvert');
+  if (fondVolet) fondVolet.classList.remove('visible');
 });
 
 // Accueil, compte
-document.getElementById('btn-accueil-icone').addEventListener('click', () => {
+const btnAccueil = document.getElementById('btn-accueil-icone');
+if (btnAccueil) btnAccueil.addEventListener('click', () => {
   navigate(Auth.isLoggedIn() ? '#/admin' : '#/');
 });
-document.getElementById('btn-compte-icone').addEventListener('click', () => {
+const btnCompte = document.getElementById('btn-compte-icone');
+if (btnCompte) btnCompte.addEventListener('click', () => {
   if (!Auth.isLoggedIn()) { navigate('#/login'); return; }
   const btn = document.getElementById('btn-mon-profil');
   if (btn) btn.click();
   else navigate('#/admin');
 });
-document.getElementById('btn-menu-deconnexion')?.addEventListener('click', () => Auth.logout());
+const btnMenuDeconnexion = document.getElementById('btn-menu-deconnexion');
+if (btnMenuDeconnexion) btnMenuDeconnexion.addEventListener('click', () => Auth.logout());
 
 // Mentions légales
 function ouvrirMentions() {
   const s = Storage.getSettings();
-  document.getElementById('contenu-mentions-legales').innerHTML = s.mentionsLegales || '<p>Mentions légales non configurées.</p>';
-  document.getElementById('modale-mentions-fond').classList.add('visible');
+  const contenu = document.getElementById('contenu-mentions-legales');
+  if (contenu) contenu.innerHTML = s.mentionsLegales || '<p>Mentions légales non configurées.</p>';
+  const modale = document.getElementById('modale-mentions-fond');
+  if (modale) modale.classList.add('visible');
 }
-document.getElementById('btn-mentions-legales-accueil')?.addEventListener('click', ouvrirMentions);
-document.getElementById('btn-mentions-legales-blog')?.addEventListener('click', ouvrirMentions);
-document.querySelectorAll('[data-fermer="modale-mentions-fond"]').forEach(el => el.addEventListener('click', () => document.getElementById('modale-mentions-fond').classList.remove('visible')));
+const btnMentionsAccueil = document.getElementById('btn-mentions-legales-accueil');
+const btnMentionsBlog = document.getElementById('btn-mentions-legales-blog');
+if (btnMentionsAccueil) btnMentionsAccueil.addEventListener('click', ouvrirMentions);
+if (btnMentionsBlog) btnMentionsBlog.addEventListener('click', ouvrirMentions);
+document.querySelectorAll('[data-fermer="modale-mentions-fond"]').forEach(el => el.addEventListener('click', () => {
+  const modale = document.getElementById('modale-mentions-fond');
+  if (modale) modale.classList.remove('visible');
+}));
 
 // Appliquer paramètres
 function appliquerParametresSite(s) {
