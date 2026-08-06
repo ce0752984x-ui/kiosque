@@ -23,7 +23,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
-    /* ===== STYLES COMPLETS (inchangés) ===== */
+    /* ===== STYLES COMPLETS (avec mode sombre) ===== */
     @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
     :root {
@@ -62,6 +62,33 @@
       --maintenance-message: 'Le site est temporairement en maintenance. Revenez bientôt !';
     }
 
+    /* Mode sombre automatique via media query */
+    @media (prefers-color-scheme: dark) {
+      :root:not(.mode-clair) {
+        --paper: #1A1F2E;
+        --paper-light: #242A3A;
+        --ink: #E8EDF5;
+        --ink-soft: #A0B0CC;
+        --ink-faint: #6A7A94;
+        --line: rgba(200,210,230,0.15);
+        --line-strong: rgba(200,210,230,0.3);
+        --shadow-color: rgba(0,0,0,0.4);
+      }
+    }
+    /* Classes de bascule manuelle */
+    .mode-clair { /* force le mode clair */ }
+    .mode-sombre {
+      --paper: #1A1F2E;
+      --paper-light: #242A3A;
+      --ink: #E8EDF5;
+      --ink-soft: #A0B0CC;
+      --ink-faint: #6A7A94;
+      --line: rgba(200,210,230,0.15);
+      --line-strong: rgba(200,210,230,0.3);
+      --shadow-color: rgba(0,0,0,0.4);
+    }
+
+    /* ===== STYLES GÉNÉRAUX (inchangés) ===== */
     * { box-sizing: border-box; }
     html, body { margin:0; padding:0; }
     html { font-size:16px; scroll-behavior:smooth; }
@@ -187,6 +214,11 @@
     .hero .eyebrow { font-family:var(--font-mono); font-size:0.75rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--rust); margin-bottom:var(--sp-3); }
     .hero h1 { font-size:clamp(2.2rem,5vw,3.4rem); max-width:14ch; margin:0 auto var(--sp-4); }
     .hero p.lead { max-width:46ch; margin:0 auto; color:var(--ink-soft); font-size:1.1rem; }
+    .recherche-accueil { margin-top:var(--sp-5); max-width:500px; margin-left:auto; margin-right:auto; }
+    .recherche-accueil input {
+      width:100%; padding:12px 18px; border-radius:999px; border:1.5px solid var(--line-strong);
+      background:var(--paper-light); font-size:1rem; color:var(--ink);
+    }
 
     /* ===== LISTE D'ARTICLES (grille 2 colonnes) ===== */
     .liste-articles-accueil {
@@ -384,6 +416,16 @@
     .page-article .btn-retour {
       margin-bottom:var(--sp-5);
     }
+
+    /* Auteur info dans l'article */
+    .auteur-info {
+      display:flex; align-items:center; gap:var(--sp-3); margin-bottom:var(--sp-4);
+    }
+    .auteur-info img {
+      width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid var(--line-strong);
+    }
+    .auteur-info .nom { font-weight:600; }
+    .auteur-info .bio { font-size:0.85rem; color:var(--ink-soft); }
 
     /* ===== PAGE BLOG (liste d'articles avec liens vers page article) ===== */
     .entete-blog { padding:var(--sp-7) 0 var(--sp-6); border-bottom:1px solid var(--line); }
@@ -629,7 +671,8 @@
 
     .liste-articles-admin { display:flex; flex-direction:column; gap:var(--sp-3); }
     .carte-article-admin {
-      background:#fff; border:1px solid var(--line); border-radius:var(--radius-m); padding:var(--sp-4) var(--sp-5);
+      background:var(--paper-light);
+      border:1px solid var(--line); border-radius:var(--radius-m); padding:var(--sp-4) var(--sp-5);
     }
     .entete-carte-article-admin {
       display:flex; align-items:flex-start; justify-content:space-between; gap:var(--sp-3); margin-bottom:var(--sp-1);
@@ -653,6 +696,15 @@
       font-size:0.8rem; padding:6px 10px; border-radius:var(--radius-s); border:1.5px solid var(--line-strong); background:#fff;
     }
 
+    /* Recherche admin articles */
+    .recherche-admin {
+      display:flex; gap:var(--sp-3); flex-wrap:wrap; margin-bottom:var(--sp-4);
+    }
+    .recherche-admin input {
+      flex:1; min-width:200px; padding:10px 14px; border-radius:var(--radius-s);
+      border:1.5px solid var(--line-strong); background:var(--paper-light);
+    }
+
     .barre-actions-detail {
       display:flex; align-items:center; gap:var(--sp-2); margin:var(--sp-4) 0 var(--sp-5); flex-wrap:wrap;
     }
@@ -674,7 +726,7 @@
     .menu-action-liste .separateur-menu { border-top:1px solid var(--line); margin:var(--sp-2) 0; }
 
     .carte-detail-article {
-      background:#fff; border:1px solid var(--line); border-radius:var(--radius-l); padding:var(--sp-6);
+      background:var(--paper-light); border:1px solid var(--line); border-radius:var(--radius-l); padding:var(--sp-6);
     }
     .entete-detail-article {
       display:flex; align-items:flex-start; justify-content:space-between; gap:var(--sp-4); margin-bottom:var(--sp-2);
@@ -723,7 +775,7 @@
     .editeur-meta .auteur-affiche strong { color:var(--ink-soft); }
 
     .section-editeur {
-      background:#fff; border:1px solid var(--line); border-radius:var(--radius-m);
+      background:var(--paper-light); border:1px solid var(--line); border-radius:var(--radius-m);
       padding:var(--sp-5); margin-bottom:var(--sp-5);
     }
     .section-editeur:last-child { margin-bottom:0; }
@@ -841,8 +893,6 @@
       .utilisateur-courant button { margin-top:0; width:auto; }
       .contenu-admin { padding:var(--sp-5) var(--sp-4); }
       .grille-stats { grid-template-columns:repeat(2,1fr); }
-      .article-item-accueil { flex-wrap:wrap; }
-      .article-item-accueil .article-image { width:80px; height:80px; }
     }
     @media (max-width:640px) {
       .conteneur { padding:0 var(--sp-4); }
@@ -866,14 +916,10 @@
       .carte-detail-article { padding:var(--sp-5); }
       .entete-detail-article { flex-direction:column; }
       .volet-lateral { width:280px; }
-      .article-item-accueil .article-image { width:60px; height:60px; }
-      .article-blog-card .article-image { width:60px; height:60px; }
     }
     @media (max-width:420px) {
       .grille-stats { grid-template-columns:1fr; }
       .hero h1 { font-size:1.9rem; }
-      .article-item-accueil .article-image { width:50px; height:50px; }
-      .article-blog-card .article-image { width:50px; height:50px; }
     }
     @media (max-width:768px) {
       .hero { padding:var(--sp-6) 0 var(--sp-5); }
@@ -1238,6 +1284,7 @@
       </div>
     </div>
     <div class="barre-superieure-droite">
+      <button type="button" class="icone-barre" id="btn-mode-sombre" aria-label="Basculer le mode sombre">🌙</button>
       <button type="button" class="icone-barre" id="btn-compte-icone" aria-label="Mon compte">
         <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 1 1 8 0v4"/></svg>
       </button>
@@ -1265,6 +1312,9 @@
         <p class="eyebrow">Toutes les publications, au même endroit</p>
         <h1>Le kiosque des publications du moment</h1>
         <p class="lead">Chroniques urbaines, carnets de voyage, actualités numériques : parcourez les publications et lisez leurs derniers articles en ligne.</p>
+        <div class="recherche-accueil">
+          <input type="text" id="recherche-accueil" placeholder="🔍 Rechercher un article...">
+        </div>
       </section>
       <section class="conteneur">
         <div id="accueil-rubriques"></div>
@@ -1363,6 +1413,9 @@
           <div class="entete-vue"><div><p class="eyebrow">Gestion</p><h1>Articles</h1><p class="sous-titre">Tous les articles, quelle que soit leur publication.</p></div><button class="btn btn-accent" id="btn-nouvel-article">＋ Nouvel article</button></div>
           <div class="carte" id="indice-action-rapide" hidden></div>
           <div class="carte">
+            <div class="recherche-admin">
+              <input type="text" id="recherche-admin-articles" placeholder="🔍 Rechercher dans les articles...">
+            </div>
             <div class="barre-filtres" id="filtres-blog-articles"></div>
             <div class="barre-filtres-et-onglets"><div class="barre-filtres" id="filtres-statut-articles"></div></div>
             <div class="liste-articles-admin" id="liste-articles-admin"></div>
@@ -1451,7 +1504,19 @@
     <div class="fond-modale" id="modale-deplacer-fond"><div class="modale"><div class="modale-entete"><h2>Déplacer l'article</h2><button class="fermer-modale" data-fermer="modale-deplacer-fond">×</button></div><div class="champ"><label for="deplacer-blog-select">Publication</label><select id="deplacer-blog-select"></select></div><div class="modale-pied"><button class="btn btn-fantome" data-fermer="modale-deplacer-fond">Annuler</button><button class="btn btn-primaire" id="btn-confirmer-deplacement">Déplacer</button></div></div></div>
     <div class="fond-modale" id="modale-confirmation-fond"><div class="modale"><div class="modale-entete"><h2>Confirmer</h2><button class="fermer-modale" data-fermer="modale-confirmation-fond">×</button></div><p id="texte-modale-confirmation">Cette action est définitive.</p><div class="modale-pied"><button class="btn btn-fantome" data-fermer="modale-confirmation-fond">Annuler</button><button class="btn btn-accent" id="btn-confirmer-suppression">Supprimer</button></div></div></div>
     <div class="fond-modale" id="modale-utilisateur-fond"><div class="modale"><div class="modale-entete"><h2 id="titre-modale-utilisateur">Nouveau compte</h2><button class="fermer-modale" data-fermer="modale-utilisateur-fond">×</button></div><div class="message-erreur" id="message-erreur-utilisateur"></div><form id="form-utilisateur"><input type="hidden" id="utilisateur-id"><div class="champ"><label for="utilisateur-identifiant">Identifiant</label><input type="text" id="utilisateur-identifiant" required></div><div class="champ"><label for="utilisateur-nom">Nom</label><input type="text" id="utilisateur-nom"></div><div class="champ"><label for="utilisateur-role">Rôle</label><select id="utilisateur-role"><option value="admin">Admin</option></select></div><div class="champ"><label for="utilisateur-motdepasse">Mot de passe</label><input type="password" id="utilisateur-motdepasse"><p class="champ-aide" id="aide-motdepasse-utilisateur">Laisser vide pour ne pas modifier</p></div><div class="champ"><label for="utilisateur-ddn">Date de naissance</label><input type="date" id="utilisateur-ddn"></div></form><div class="modale-pied"><button class="btn btn-danger pousser-gauche" id="btn-supprimer-compte" hidden>Supprimer</button><button class="btn btn-fantome" data-fermer="modale-utilisateur-fond">Annuler</button><button type="submit" form="form-utilisateur" class="btn btn-primaire">Enregistrer</button></div></div></div>
-    <div class="fond-modale" id="modale-profil-fond"><div class="modale"><div class="modale-entete"><h2>Mon profil</h2><button class="fermer-modale" data-fermer="modale-profil-fond">×</button></div><div class="message-erreur" id="message-erreur-profil"></div><form id="form-profil"><div class="champ"><label for="profil-nom">Nom</label><input type="text" id="profil-nom"></div><div class="champ"><label for="profil-motdepasse">Nouveau mot de passe</label><input type="password" id="profil-motdepasse"><p class="champ-aide">Laisser vide pour ne pas changer</p></div></form><div class="modale-pied"><button class="btn btn-fantome" data-fermer="modale-profil-fond">Annuler</button><button type="submit" form="form-profil" class="btn btn-primaire">Enregistrer</button></div></div></div>
+    <div class="fond-modale" id="modale-profil-fond"><div class="modale"><div class="modale-entete"><h2>Mon profil</h2><button class="fermer-modale" data-fermer="modale-profil-fond">×</button></div><div class="message-erreur" id="message-erreur-profil"></div><form id="form-profil">
+      <div class="champ"><label for="profil-nom">Nom d'affichage</label><input type="text" id="profil-nom"></div>
+      <div class="champ"><label for="profil-bio">Bio</label><textarea id="profil-bio" rows="3" placeholder="Quelques mots sur vous..."></textarea></div>
+      <div class="champ">
+        <label>Photo de profil</label>
+        <div style="display:flex;align-items:center;gap:var(--sp-3);">
+          <img id="profil-avatar-preview" src="" alt="Avatar" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--line-strong);">
+          <button type="button" class="btn btn-fantome btn-petit" id="btn-choisir-avatar">Choisir</button>
+          <input type="file" id="champ-avatar" accept="image/*" style="display:none;">
+        </div>
+      </div>
+      <div class="champ"><label for="profil-motdepasse">Nouveau mot de passe</label><input type="password" id="profil-motdepasse"><p class="champ-aide">Laisser vide pour ne pas changer</p></div>
+    </form><div class="modale-pied"><button class="btn btn-fantome" data-fermer="modale-profil-fond">Annuler</button><button type="submit" form="form-profil" class="btn btn-primaire">Enregistrer</button></div></div></div>
   </div>
 
   <!-- ===== PAGE BLOG ===== -->
@@ -1497,7 +1562,7 @@
 
   <script>
     // ============================================================
-    // SCRIPT COMPLET CORRIGÉ — de A à Z
+    // SCRIPT COMPLET CORRIGÉ ET AMÉLIORÉ (AUTO-SAVE, RECHERCHE, MODE SOMBRE, PROFIL)
     // ============================================================
     firebase.initializeApp({
       apiKey: "AIzaSyARV_E4XtJS13CndRnYQqtjVGP7LcxxPzs",
@@ -1605,7 +1670,7 @@
         });
       }
 
-      async function createArticle({ blogId, titre, resume, contenu, auteur, statut, image, pieceJointes }) {
+      async function createArticle({ blogId, titre, resume, contenu, auteur, auteurId, statut, image, pieceJointes }) {
         const id = genId('art');
         let imageId = null;
         if (image) { imageId = genId('img'); saveFile(imageId, image); }
@@ -1622,6 +1687,7 @@
           imageId,
           pieceJointes: piecesMeta,
           auteur: (auteur||'').trim() || 'Anonyme',
+          auteurId: auteurId || null,
           dateCreation: now(),
           dateModification: now(),
           statut: STATUTS.includes(statut) ? statut : 'Brouillon'
@@ -1692,17 +1758,17 @@
         return _cache.users.find(u => u.username.toLowerCase() === c) || null;
       }
       function nombreAdmins() { return _cache.users.filter(u => u.role === 'admin').length; }
-      async function createUser({ username, password, nom, role, ddn }) {
+      async function createUser({ username, password, nom, role, ddn, avatar, bio }) {
         const ident = String(username||'').trim();
         if (!ident) return { ok: false, erreur: "Identifiant requis" };
         if (!password || password.length < 4) return { ok: false, erreur: "Mot de passe 4 caractères minimum" };
         if (trouverParIdentifiant(ident)) return { ok: false, erreur: "Identifiant déjà utilisé" };
         const id = genId('usr');
-        const u = { id, username: ident, password, nom: (nom||'').trim()||ident, role: ROLES.includes(role)?role:'admin', ddn: ddn||'' };
+        const u = { id, username: ident, password, nom: (nom||'').trim()||ident, role: ROLES.includes(role)?role:'admin', ddn: ddn||'', avatar: avatar || '', bio: bio || '' };
         await db.collection('users').doc(id).set(u);
         return { ok: true, user: u };
       }
-      async function updateUser(id, { username, password, nom, role, ddn }) {
+      async function updateUser(id, { username, password, nom, role, ddn, avatar, bio }) {
         const users = _cache.users;
         const idx = users.findIndex(u => u.id === id);
         if (idx === -1) return { ok: false, erreur: "Compte introuvable" };
@@ -1715,6 +1781,8 @@
           return { ok: false, erreur: "Dernier admin" };
         if (password && password.length < 4) return { ok: false, erreur: "Mot de passe 4 caractères min" };
         const up = { ...users[idx], username: ident, nom: (nom||'').trim()||ident, role: newRole, ddn: ddn !== undefined ? ddn : users[idx].ddn };
+        if (avatar !== undefined) up.avatar = avatar || '';
+        if (bio !== undefined) up.bio = bio || '';
         if (password && password.length > 0) up.password = password;
         await db.collection('users').doc(id).set(up);
         const session = getSession();
@@ -1774,12 +1842,12 @@
         const batch = db.batch();
         [...blogsSnap.docs, ...artsSnap.docs, ...usersSnap.docs, ...catsSnap.docs].forEach(d => batch.delete(d.ref));
         const adminId = genId('usr'), catId = genId('cat'), blogId = genId('blg'), now_ = now();
-        batch.set(db.collection('users').doc(adminId), { id: adminId, username: 'admin', password: 'admin123', nom: 'Administrateur', role: 'admin', ddn: '1990-01-01' });
+        batch.set(db.collection('users').doc(adminId), { id: adminId, username: 'admin', password: 'admin123', nom: 'Administrateur', role: 'admin', ddn: '1990-01-01', avatar: '', bio: '' });
         batch.set(db.doc('settings/global'), { siteName: 'Kiosque', tagline: 'Le kiosque des publications du moment', articlesParPage: 6, copyright: '© ' + new Date().getFullYear() + ' Kiosque — Tous droits réservés.', emailContact: '', logoEmoji: '📰', couleurPrincipale: '#0A3A8C', couleurAccent: '#CC1533', couleurFond: '#F0F4FF', modeSombre: true, ddnRequis: true, modeMaintenance: false, msgMaintenance: 'Site en maintenance.', ageMinimum: 0, moderationAuto: false, commentairesActifs: false, statutDefaut: 'Brouillon', auteurAffichage: 'nom', mentionsLegales: '<h3>Éditeur</h3><p>Kiosque</p>', maintenanceBg: '#0A3A8C', maintenanceColor: '#FFFFFF', maintenanceTitle: 'Kiosque — Maintenance', maintenanceMessage: 'Site en maintenance.', maintenanceFontSize: '2rem' });
         batch.set(db.collection('categories').doc(catId), { id: catId, nom: 'Actualités', dateCreation: now_ });
         batch.set(db.collection('blogs').doc(blogId), { id: blogId, titre: 'Chroniques Urbaines', description: 'Les transformations de nos villes.', categorieId: catId, dateCreation: now_ });
         const artId = genId('art');
-        batch.set(db.collection('articles').doc(artId), { id: artId, blogId: blogId, titre: 'La renaissance des friches', resume: 'Les anciennes usines deviennent des lieux créatifs.', contenu: '<p>Exemple de contenu.</p>', imageId: null, pieceJointes: [], auteur: 'Administrateur', dateCreation: now_, dateModification: now_, statut: 'En ligne' });
+        batch.set(db.collection('articles').doc(artId), { id: artId, blogId: blogId, titre: 'La renaissance des friches', resume: 'Les anciennes usines deviennent des lieux créatifs.', contenu: '<p>Exemple de contenu.</p>', imageId: null, pieceJointes: [], auteur: 'Administrateur', auteurId: adminId, dateCreation: now_, dateModification: now_, statut: 'En ligne' });
         await batch.commit();
         Object.keys(localStorage).filter(k => k.startsWith('kiosque_fichier_')).forEach(k => localStorage.removeItem(k));
       }
@@ -1794,7 +1862,7 @@
           if (usersSnap.empty) {
             needsWrite = true;
             const adminId = genId('usr');
-            batch.set(db.collection('users').doc(adminId), { id: adminId, username: 'admin', password: 'admin123', nom: 'Administrateur', role: 'admin', ddn: '1990-01-01' });
+            batch.set(db.collection('users').doc(adminId), { id: adminId, username: 'admin', password: 'admin123', nom: 'Administrateur', role: 'admin', ddn: '1990-01-01', avatar: '', bio: '' });
           }
           if (!settingsSnap.exists) {
             needsWrite = true;
@@ -1817,9 +1885,9 @@
             batch2.set(db.collection('blogs').doc(b2), { id: b2, titre: 'Carnets de Voyage', description: 'Récits d\'ailleurs.', categorieId: catId, dateCreation: now_ });
             batch2.set(db.collection('blogs').doc(b3), { id: b3, titre: 'Labo Numérique', description: 'Technologie décryptée.', categorieId: catId, dateCreation: now_ });
             const a1 = genId('art'), a2 = genId('art'), a3 = genId('art');
-            batch2.set(db.collection('articles').doc(a1), { id: a1, blogId: b1, titre: 'La renaissance des friches', resume: 'Les anciennes usines deviennent des lieux créatifs.', contenu: '<p>Exemple 1</p>', imageId: null, pieceJointes: [], auteur: 'Administrateur', dateCreation: now_, dateModification: now_, statut: 'En ligne' });
-            batch2.set(db.collection('articles').doc(a2), { id: a2, blogId: b2, titre: 'Trois semaines dans les Balkans', resume: 'Itinéraire complet.', contenu: '<p>Exemple 2</p>', imageId: null, pieceJointes: [], auteur: 'Administrateur', dateCreation: now_, dateModification: now_, statut: 'En ligne' });
-            batch2.set(db.collection('articles').doc(a3), { id: a3, blogId: b3, titre: 'Comprendre Firestore', resume: 'Stockage temps réel.', contenu: '<p>Exemple 3</p>', imageId: null, pieceJointes: [], auteur: 'Administrateur', dateCreation: now_, dateModification: now_, statut: 'En ligne' });
+            batch2.set(db.collection('articles').doc(a1), { id: a1, blogId: b1, titre: 'La renaissance des friches', resume: 'Les anciennes usines deviennent des lieux créatifs.', contenu: '<p>Exemple 1</p>', imageId: null, pieceJointes: [], auteur: 'Administrateur', auteurId: null, dateCreation: now_, dateModification: now_, statut: 'En ligne' });
+            batch2.set(db.collection('articles').doc(a2), { id: a2, blogId: b2, titre: 'Trois semaines dans les Balkans', resume: 'Itinéraire complet.', contenu: '<p>Exemple 2</p>', imageId: null, pieceJointes: [], auteur: 'Administrateur', auteurId: null, dateCreation: now_, dateModification: now_, statut: 'En ligne' });
+            batch2.set(db.collection('articles').doc(a3), { id: a3, blogId: b3, titre: 'Comprendre Firestore', resume: 'Stockage temps réel.', contenu: '<p>Exemple 3</p>', imageId: null, pieceJointes: [], auteur: 'Administrateur', auteurId: null, dateCreation: now_, dateModification: now_, statut: 'En ligne' });
             await batch2.commit();
           }
         } catch(e) { console.warn('seedIfEmpty error', e); }
@@ -1869,6 +1937,37 @@
     function debouncer(fn, delay) { let timer; return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); }; }
     function lireFichierEnBase64(f) { return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = () => reject(r.error); r.readAsDataURL(f); }); }
 
+    // ===== AUTO-SAVE =====
+    const AUTO_SAVE_KEY = 'kiosque_brouillon';
+    function sauvegarderBrouillonLocal() {
+      const data = {
+        id: document.getElementById('article-id').value,
+        blogId: document.getElementById('article-blog').value,
+        titre: document.getElementById('champ-titre').value,
+        resume: document.getElementById('champ-resume').value,
+        contenu: quillInstance ? quillInstance.root.innerHTML : '',
+        image: document.getElementById('img-previsualisation-illustration').src || '',
+        pieces: piecesJointesTemp.map(p => ({ ...p }))
+      };
+      localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(data));
+      const indicateur = document.getElementById('indicateur-sauvegarde');
+      if (indicateur) {
+        indicateur.textContent = 'brouillon sauvegardé';
+        indicateur.classList.add('visible');
+        clearTimeout(indicateur._timer);
+        indicateur._timer = setTimeout(() => indicateur.classList.remove('visible'), 3000);
+      }
+    }
+    function restaurerBrouillonLocal() {
+      const raw = localStorage.getItem(AUTO_SAVE_KEY);
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return null; }
+    }
+    function supprimerBrouillonLocal() {
+      localStorage.removeItem(AUTO_SAVE_KEY);
+    }
+
+    // ===== PAGE ACCUEIL =====
     let pageCourante = 1;
 
     function prepareAccueilPage() {
@@ -1877,7 +1976,15 @@
       const pagination = document.getElementById('pagination-accueil');
       if (!conteneur) return;
 
+      const recherche = document.getElementById('recherche-accueil')?.value?.toLowerCase() || '';
       let articles = Storage.getArticles().filter(a => a.statut === 'En ligne');
+      if (recherche) {
+        articles = articles.filter(a =>
+          (a.titre || '').toLowerCase().includes(recherche) ||
+          (a.resume || '').toLowerCase().includes(recherche) ||
+          (a.contenu || '').toLowerCase().includes(recherche)
+        );
+      }
       articles.sort((a, b) => new Date(b.dateModification) - new Date(a.dateModification));
 
       const totalArticles = articles.length;
@@ -1926,9 +2033,13 @@
       });
       html += '</div>';
       conteneur.innerHTML = html;
-
       genererPagination(totalPages, pagination);
     }
+
+    document.getElementById('recherche-accueil')?.addEventListener('input', () => {
+      pageCourante = 1;
+      prepareAccueilPage();
+    });
 
     function genererPagination(totalPages, container) {
       if (!container) return;
@@ -1939,25 +2050,20 @@
       }
       html += `<button class="btn-pagination" data-page="next" ${pageCourante >= totalPages ? 'disabled' : ''}>›</button>`;
       container.innerHTML = html;
-
       container.querySelectorAll('.btn-pagination').forEach(btn => {
         btn.addEventListener('click', () => {
           const page = btn.dataset.page;
-          if (page === 'prev' && pageCourante > 1) {
-            pageCourante--;
-          } else if (page === 'next' && pageCourante < totalPages) {
-            pageCourante++;
-          } else if (!isNaN(page)) {
-            pageCourante = parseInt(page);
-          } else {
-            return;
-          }
+          if (page === 'prev' && pageCourante > 1) pageCourante--;
+          else if (page === 'next' && pageCourante < totalPages) pageCourante++;
+          else if (!isNaN(page)) pageCourante = parseInt(page);
+          else return;
           prepareAccueilPage();
           document.getElementById('accueil-rubriques').scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
       });
     }
 
+    // ===== PAGE ARTICLE (détail) =====
     function prepareArticlePage(articleId) {
       const detailContainer = document.getElementById('article-detail');
       const filBlog = document.getElementById('article-fil-blog');
@@ -1976,69 +2082,72 @@
       if (filBlog) filBlog.textContent = blogNom;
       document.title = article.titre + ' — Kiosque';
 
-      if (blog) {
-        btnRetour.onclick = () => { navigate('#/blog?id=' + encodeURIComponent(blog.id)); };
-      } else {
-        btnRetour.onclick = () => { navigate('#/'); };
+      if (blog) btnRetour.onclick = () => navigate('#/blog?id=' + encodeURIComponent(blog.id));
+      else btnRetour.onclick = () => navigate('#/');
+
+      // Auteur info (avatar, bio)
+      let auteurHtml = '';
+      if (article.auteurId) {
+        const auteur = Storage.getUserById(article.auteurId);
+        if (auteur) {
+          auteurHtml = `
+            <div class="auteur-info">
+              <img src="${auteur.avatar || ''}" alt="Avatar" onerror="this.style.display='none'">
+              <div>
+                <div class="nom">${echapper(auteur.nom || auteur.username)}</div>
+                <div class="bio">${echapper(auteur.bio || '')}</div>
+              </div>
+            </div>
+          `;
+        }
       }
 
       let html = `
         <h1>${echapper(article.titre)}</h1>
+        ${auteurHtml}
         <div class="meta-detail">
           Par ${echapper(article.auteur)} · 
           Créé le ${formaterDateCourte(article.dateCreation)} · 
           Mis à jour le ${formaterDateCourte(article.dateModification)}
         </div>
       `;
-
-      if (article.image) {
-        html += `<div class="illustration"><img src="${article.image}" alt="${echapper(article.titre)}"></div>`;
-      }
-
-      if (article.resume) {
-        html += `<div class="resume">${echapper(article.resume)}</div>`;
-      }
-
+      if (article.image) html += `<div class="illustration"><img src="${article.image}" alt="${echapper(article.titre)}"></div>`;
+      if (article.resume) html += `<div class="resume">${echapper(article.resume)}</div>`;
       html += `<div class="contenu">${article.contenu || '<p><em>Cet article n\'a pas encore de contenu.</em></p>'}</div>`;
-
       const pieces = Array.isArray(article.pieceJointes) ? article.pieceJointes : [];
       if (pieces.length) {
         html += `<div class="pieces">${pieces.map(p => `<a href="${p.donnees}" download="${echapper(p.nom)}">📄 ${echapper(p.nom)}</a>`).join('')}</div>`;
       }
-
       detailContainer.innerHTML = html;
     }
 
+    // ===== MENTIONS =====
     function ouvrirMentions() {
       const s = Storage.getSettings();
       const contenu = document.getElementById('contenu-mentions-legales');
       if (contenu) contenu.innerHTML = s.mentionsLegales || '<p>Mentions légales non configurées.</p>';
-      const modale = document.getElementById('modale-mentions-fond');
-      if (modale) modale.classList.add('visible');
+      document.getElementById('modale-mentions-fond').classList.add('visible');
     }
 
+    // ===== VOLET LATÉRAL =====
     function mettreAJourVolet() {
       const liste = document.getElementById('liste-rubriques-volet');
       if (!liste) return;
       const categories = Storage.getCategories();
       const blogs = Storage.getBlogs();
       const articles = Storage.getArticles().filter(a => a.statut === 'En ligne');
-
       if (categories.length === 0 && blogs.length === 0) {
         liste.innerHTML = '<li class="aucune-pub">Aucune publication disponible.</li>';
         return;
       }
-
       const rubriquesMap = {};
       categories.forEach(c => { rubriquesMap[c.id] = { nom: c.nom, blogs: [] }; });
       rubriquesMap['sans_rubrique'] = { nom: 'Sans rubrique', blogs: [] };
-
       blogs.forEach(b => {
         const key = b.categorieId || 'sans_rubrique';
         if (rubriquesMap[key]) rubriquesMap[key].blogs.push(b);
         else rubriquesMap['sans_rubrique'].blogs.push(b);
       });
-
       let html = '';
       const keys = Object.keys(rubriquesMap).filter(k => rubriquesMap[k].blogs.length > 0);
       keys.sort((a,b) => {
@@ -2046,12 +2155,9 @@
         if (b === 'sans_rubrique') return -1;
         return rubriquesMap[a].nom.localeCompare(rubriquesMap[b].nom);
       });
-
       keys.forEach(key => {
         const rub = rubriquesMap[key];
-        html += `<li>
-          <div class="nom-rubrique">${echapper(rub.nom)}</div>
-          <ul class="sous-liste">`;
+        html += `<li><div class="nom-rubrique">${echapper(rub.nom)}</div><ul class="sous-liste">`;
         rub.blogs.forEach(b => {
           const nb = articles.filter(a => a.blogId === b.id).length;
           html += `<li><a href="#/blog?id=${encodeURIComponent(b.id)}">${echapper(b.titre)} <span class="nb-articles">(${nb} article${nb>1?'s':''})</span></a></li>`;
@@ -2061,8 +2167,8 @@
       liste.innerHTML = html;
     }
 
+    // ===== PAGE BLOG =====
     const blogState = { blog: null, statutActif: 'En ligne' };
-
     function construireFiltresBlog() {
       const conteneur = document.getElementById('filtres-statuts');
       if (!conteneur) return;
@@ -2074,7 +2180,6 @@
         afficherArticlesBlog();
       }));
     }
-
     function afficherArticlesBlog() {
       if (!blogState.blog) return;
       const conteneur = document.getElementById('liste-articles-blog');
@@ -2085,13 +2190,10 @@
       filtres.sort((a,b) => new Date(b.dateCreation) - new Date(a.dateCreation));
       if (filtres.length === 0) { conteneur.innerHTML = ''; if (etatVide) etatVide.hidden = false; return; }
       if (etatVide) etatVide.hidden = true;
-
       let html = '';
       filtres.forEach(a => {
         let imageHtml = '';
-        if (a.image) {
-          imageHtml = `<div class="article-image"><img src="${a.image}" alt="${echapper(a.titre)}"></div>`;
-        }
+        if (a.image) imageHtml = `<div class="article-image"><img src="${a.image}" alt="${echapper(a.titre)}"></div>`;
         html += `
           <a href="#/article?id=${encodeURIComponent(a.id)}" class="article-blog-card">
             ${imageHtml}
@@ -2109,7 +2211,6 @@
       });
       conteneur.innerHTML = html;
     }
-
     function prepareBlogPage(blogId) {
       const blog = blogId ? Storage.getBlogById(blogId) : null;
       const titreBlog = document.getElementById('titre-blog');
@@ -2118,10 +2219,8 @@
       const conteneurFiltres = document.getElementById('filtres-statuts');
       const conteneurListe = document.getElementById('liste-articles-blog');
       const etatVide = document.getElementById('etat-vide-blog');
-
       blogState.blog = blog;
       blogState.statutActif = 'En ligne';
-
       if (!blog) {
         document.title = 'Publication introuvable — Kiosque';
         if (titreBlog) titreBlog.textContent = 'Publication introuvable';
@@ -2141,6 +2240,7 @@
       afficherArticlesBlog();
     }
 
+    // ===== LOGIN =====
     function prepareLoginPage() {
       const msg = document.getElementById('message-erreur');
       if (msg) { msg.classList.remove('visible'); msg.textContent = ''; }
@@ -2162,11 +2262,11 @@
       else { const msg = document.getElementById('message-erreur'); if (msg) { msg.textContent = res.erreur; msg.classList.add('visible'); } }
     });
 
+    // ===== ROUTEUR =====
     function navigate(hash) {
       window.location.hash = hash;
       router();
     }
-
     document.addEventListener('click', function(e) {
       const target = e.target.closest('a');
       if (!target) return;
@@ -2178,7 +2278,6 @@
         navigate(href);
       }
     });
-
     function analyserHash() {
       let hash = window.location.hash || '#/';
       hash = hash.replace(/^#/, '');
@@ -2186,17 +2285,14 @@
       const [chemin, requete] = hash.split('?');
       return { chemin: chemin || '/', params: new URLSearchParams(requete || '') };
     }
-
     function afficherPage(nom) {
       document.querySelectorAll('.page').forEach(p => p.classList.toggle('page-actif', p.dataset.page === nom));
       window.scrollTo(0, 0);
     }
-
     function router() {
       const { chemin, params } = analyserHash();
       const s = Storage.getSettings();
       const nomSite = (s && s.siteName) ? s.siteName : 'Kiosque';
-
       if (chemin === '/login') {
         if (Auth.isLoggedIn()) { navigate('#/admin'); return; }
         afficherPage('login');
@@ -2226,11 +2322,10 @@
       prepareAccueilPage();
       appliquerParametresSite(s);
     }
-
     window.addEventListener('hashchange', router);
 
     // ============================================================
-    // ADMIN — FONCTIONS COMPLÈTES (CORRIGÉES)
+    // ADMIN — FONCTIONS COMPLÈTES (AVEC PROFIL + RECHERCHE)
     // ============================================================
     let quillInstance = null;
     let articleEnEditionId = null;
@@ -2245,7 +2340,8 @@
     function prepareAdminPage() {
       const user = Auth.getCurrentUser();
       if (!user) return;
-      document.getElementById('nom-utilisateur').textContent = user.nom || user.username;
+      const fullUser = Storage.getUserById(user.userId);
+      document.getElementById('nom-utilisateur').textContent = fullUser ? fullUser.nom || fullUser.username : user.username;
       document.getElementById('role-utilisateur').textContent = user.role === 'admin' ? 'Administrateur' : 'Rédacteur';
 
       document.querySelectorAll('.nav-admin button[data-vue]').forEach(btn => {
@@ -2320,9 +2416,25 @@
         if (!user) return;
         const nom = document.getElementById('profil-nom').value.trim();
         const mdp = document.getElementById('profil-motdepasse').value;
-        const res = await Storage.updateUser(user.userId, { nom, password: mdp });
-        if (res.ok) { afficherBanniereKiosque('Profil mis à jour', '#1A7A40'); fermerModale('modale-profil-fond'); }
-        else { document.getElementById('message-erreur-profil').textContent = res.erreur; document.getElementById('message-erreur-profil').classList.add('visible'); }
+        const bio = document.getElementById('profil-bio').value.trim();
+        const avatar = document.getElementById('profil-avatar-preview').src || '';
+        const res = await Storage.updateUser(user.userId, {
+          nom,
+          password: mdp,
+          bio,
+          avatar: avatar.startsWith('data:') ? avatar : ''
+        });
+        if (res.ok) {
+          afficherBanniereKiosque('Profil mis à jour', '#1A7A40');
+          fermerModale('modale-profil-fond');
+          const updatedUser = Auth.getCurrentUser();
+          if (updatedUser) {
+            document.getElementById('nom-utilisateur').textContent = res.user.nom || res.user.username;
+          }
+        } else {
+          document.getElementById('message-erreur-profil').textContent = res.erreur;
+          document.getElementById('message-erreur-profil').classList.add('visible');
+        }
       });
 
       document.getElementById('btn-sauver-parametres').addEventListener('click', async () => {
@@ -2404,10 +2516,12 @@
             ['clean']
           ] }
         });
-        quillInstance.on('text-change', () => { majCompteurContenu(); });
+        quillInstance.on('text-change', () => { majCompteurContenu(); sauvegarderBrouillonLocal(); });
       }
 
       initialiserGestionPieces();
+      // Recherche admin articles
+      document.getElementById('recherche-admin-articles')?.addEventListener('input', rafraichirVueArticles);
     }
 
     function fermerModale(id) {
@@ -2501,10 +2615,18 @@
 
       const blogActif = document.querySelector('#filtres-blog-articles .filtre-puce.actif')?.dataset.blog || 'tous';
       const statutActif = document.querySelector('#filtres-statut-articles .filtre-puce.actif')?.dataset.statut || 'Tous';
+      const recherche = document.getElementById('recherche-admin-articles')?.value?.toLowerCase() || '';
 
       let affiches = articles;
       if (blogActif !== 'tous') affiches = affiches.filter(a => a.blogId === blogActif);
       if (statutActif !== 'Tous') affiches = affiches.filter(a => a.statut === statutActif);
+      if (recherche) {
+        affiches = affiches.filter(a =>
+          (a.titre || '').toLowerCase().includes(recherche) ||
+          (a.resume || '').toLowerCase().includes(recherche) ||
+          (a.contenu || '').toLowerCase().includes(recherche)
+        );
+      }
 
       container.innerHTML = affiches.map(a => {
         const blog = Storage.getBlogById(a.blogId);
@@ -2635,11 +2757,29 @@
 
     function ouvrirModaleProfil() {
       const user = Auth.getCurrentUser();
-      document.getElementById('profil-nom').value = user.nom || '';
+      const fullUser = Storage.getUserById(user.userId);
+      if (!fullUser) return;
+      document.getElementById('profil-nom').value = fullUser.nom || '';
+      document.getElementById('profil-bio').value = fullUser.bio || '';
+      document.getElementById('profil-avatar-preview').src = fullUser.avatar || '';
       document.getElementById('profil-motdepasse').value = '';
       document.getElementById('message-erreur-profil').classList.remove('visible');
       document.getElementById('modale-profil-fond').classList.add('visible');
     }
+
+    // Gestion avatar dans profil
+    document.getElementById('btn-choisir-avatar')?.addEventListener('click', () => {
+      document.getElementById('champ-avatar').click();
+    });
+    document.getElementById('champ-avatar')?.addEventListener('change', function() {
+      if (this.files.length > 0) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          document.getElementById('profil-avatar-preview').src = e.target.result;
+        };
+        reader.readAsDataURL(this.files[0]);
+      }
+    });
 
     async function supprimerRubrique(id) {
       if (confirm('Supprimer cette rubrique ? Les publications seront sans rubrique.')) {
@@ -2720,7 +2860,7 @@
       modale.classList.add('visible');
     }
 
-    // --- ÉDITEUR (corrigé) ---
+    // --- ÉDITEUR (corrigé avec auto-save) ---
     function ouvrirEditeur(id) {
       const modale = document.getElementById('modale-editeur-fond');
       document.getElementById('titre-modale-editeur').textContent = id ? 'Modifier l\'article' : 'Nouvel article';
@@ -2749,11 +2889,51 @@
               ['clean']
             ] }
           });
-          quillInstance.on('text-change', () => { majCompteurContenu(); });
+          quillInstance.on('text-change', () => { majCompteurContenu(); sauvegarderBrouillonLocal(); });
         } catch(e) {
           console.error('Erreur initialisation Quill', e);
           afficherBanniereKiosque('Erreur de l\'éditeur de texte', '#CC1533');
           return;
+        }
+      }
+
+      // Si pas d'id, tenter de restaurer le brouillon local
+      if (!id) {
+        const brouillon = restaurerBrouillonLocal();
+        if (brouillon) {
+          document.getElementById('article-blog').value = brouillon.blogId || '';
+          document.getElementById('champ-titre').value = brouillon.titre || '';
+          document.getElementById('champ-resume').value = brouillon.resume || '';
+          if (brouillon.contenu && quillInstance) {
+            quillInstance.root.innerHTML = brouillon.contenu;
+            quillInstance.update();
+          }
+          if (brouillon.image && brouillon.image.startsWith('data:')) {
+            document.getElementById('img-previsualisation-illustration').src = brouillon.image;
+            document.getElementById('previsualisation-illustration').hidden = false;
+          }
+          if (brouillon.pieces && brouillon.pieces.length) {
+            piecesJointesTemp = brouillon.pieces;
+            const piecesList = document.getElementById('liste-pieces-jointes');
+            piecesList.innerHTML = brouillon.pieces.map(p => `
+              <li class="piece-jointe">
+                <span class="icone-fichier">📎</span>
+                <span class="nom-fichier">${echapper(p.nom)}</span>
+                <span class="taille-fichier">${p.taille || ''}</span>
+                <button class="btn-retirer-fichier" data-id="${p.id}">×</button>
+              </li>
+            `).join('');
+            piecesList.querySelectorAll('.btn-retirer-fichier').forEach(btn => {
+              btn.addEventListener('click', function() {
+                const pid = this.dataset.id;
+                Storage.delFile(pid);
+                piecesJointesTemp = piecesJointesTemp.filter(p => p.id !== pid);
+                this.closest('.piece-jointe').remove();
+                sauvegarderBrouillonLocal();
+              });
+            });
+          }
+          afficherBanniereKiosque('Brouillon local restauré', '#0056D6');
         }
       }
 
@@ -2798,7 +2978,7 @@
             Storage.delFile(pid);
             piecesJointesTemp = piecesJointesTemp.filter(p => p.id !== pid);
             btn.closest('.piece-jointe').remove();
-            afficherBanniereKiosque('Pièce jointe retirée.', '#1A7A40');
+            sauvegarderBrouillonLocal();
           });
         });
         piecesJointesTemp = pieces.map(p => ({ id: p.id, nom: p.nom, taille: p.taille, type: p.type, donnees: p.donnees }));
@@ -2821,6 +3001,12 @@
       majCompteurContenu();
       document.getElementById('btn-enregistrer-brouillon').disabled = false;
       document.getElementById('btn-publier-article').disabled = false;
+      // Auto-save sur modifications des champs
+      const inputs = ['#champ-titre', '#champ-resume', '#article-blog'];
+      inputs.forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el) el.addEventListener('input', sauvegarderBrouillonLocal);
+      });
       modale.classList.add('visible');
     }
 
@@ -2852,6 +3038,7 @@
         const contenu = quillInstance ? quillInstance.root.innerHTML : '';
         const user = Auth.getCurrentUser();
         const auteur = user ? user.nom || user.username : 'Anonyme';
+        const auteurId = user ? user.userId : null;
         let image = null;
         const imgEl = document.getElementById('img-previsualisation-illustration');
         if (imgEl && imgEl.src && imgEl.src.startsWith('data:')) image = imgEl.src;
@@ -2869,11 +3056,12 @@
           pieces.push(pieceData);
         });
 
-        const data = { blogId, titre, resume, contenu, auteur, statut, image, pieceJointes: pieces };
+        const data = { blogId, titre, resume, contenu, auteur, auteurId, statut, image, pieceJointes: pieces };
         let result;
         if (id) result = await Storage.updateArticle(id, data);
         else result = await Storage.createArticle(data);
         if (result) {
+          supprimerBrouillonLocal();
           fermerModale('modale-editeur-fond');
           afficherBanniereKiosque(`Article ${statut === 'En ligne' ? 'publié' : 'enregistré'}`, '#1A7A40');
           rafraichirVueArticles();
@@ -2929,9 +3117,10 @@
               Storage.delFile(id);
               piecesJointesTemp = piecesJointesTemp.filter(p => p.id !== id);
               li.remove();
-              afficherBanniereKiosque('Pièce jointe retirée.', '#1A7A40');
+              sauvegarderBrouillonLocal();
             });
             afficherBanniereKiosque('Pièce jointe ajoutée.', '#1A7A40');
+            sauvegarderBrouillonLocal();
           };
           reader.readAsDataURL(fichier);
         });
@@ -2974,7 +3163,7 @@
           zoneIllus.classList.remove('survol');
           if (e.dataTransfer.files.length > 0) {
             const reader = new FileReader();
-            reader.onload = (ev) => { imgPreview.src = ev.target.result; preview.hidden = false; afficherBanniereKiosque('Image ajoutée.', '#1A7A40'); };
+            reader.onload = (ev) => { imgPreview.src = ev.target.result; preview.hidden = false; sauvegarderBrouillonLocal(); afficherBanniereKiosque('Image ajoutée.', '#1A7A40'); };
             reader.readAsDataURL(e.dataTransfer.files[0]);
           }
         });
@@ -2983,16 +3172,54 @@
         champIllus.addEventListener('change', function() {
           if (this.files.length > 0) {
             const reader = new FileReader();
-            reader.onload = (ev) => { imgPreview.src = ev.target.result; preview.hidden = false; afficherBanniereKiosque('Image ajoutée.', '#1A7A40'); };
+            reader.onload = (ev) => { imgPreview.src = ev.target.result; preview.hidden = false; sauvegarderBrouillonLocal(); afficherBanniereKiosque('Image ajoutée.', '#1A7A40'); };
             reader.readAsDataURL(this.files[0]);
             this.value = '';
           }
         });
       }
       if (btnRetirerIllus) {
-        btnRetirerIllus.addEventListener('click', () => { imgPreview.src = ''; preview.hidden = true; afficherBanniereKiosque('Image retirée.', '#1A7A40'); });
+        btnRetirerIllus.addEventListener('click', () => { imgPreview.src = ''; preview.hidden = true; sauvegarderBrouillonLocal(); afficherBanniereKiosque('Image retirée.', '#1A7A40'); });
       }
     }
+
+    // ============================================================
+    // MODE SOMBRE
+    // ============================================================
+    const btnMode = document.getElementById('btn-mode-sombre');
+    const modePref = localStorage.getItem('kiosque_mode') || 'auto';
+    function appliquerMode(mode) {
+      const root = document.documentElement;
+      if (mode === 'clair') {
+        root.classList.add('mode-clair');
+        root.classList.remove('mode-sombre');
+        btnMode.textContent = '🌙';
+      } else if (mode === 'sombre') {
+        root.classList.remove('mode-clair');
+        root.classList.add('mode-sombre');
+        btnMode.textContent = '☀️';
+      } else {
+        root.classList.remove('mode-clair', 'mode-sombre');
+        btnMode.textContent = '⚙️';
+      }
+      localStorage.setItem('kiosque_mode', mode);
+    }
+    appliquerMode(modePref);
+    btnMode?.addEventListener('click', () => {
+      const current = localStorage.getItem('kiosque_mode') || 'auto';
+      let next = 'auto';
+      if (current === 'auto') next = 'clair';
+      else if (current === 'clair') next = 'sombre';
+      else next = 'auto';
+      appliquerMode(next);
+    });
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (localStorage.getItem('kiosque_mode') === 'auto') {
+        const isDark = e.matches;
+        document.documentElement.classList.toggle('mode-sombre', isDark);
+        document.documentElement.classList.toggle('mode-clair', !isDark);
+      }
+    });
 
     // ============================================================
     // CHROME (menu, volet, etc.)
@@ -3066,8 +3293,7 @@
     if (btnMentionsBlog) btnMentionsBlog.addEventListener('click', ouvrirMentions);
     if (btnMentionsArticle) btnMentionsArticle.addEventListener('click', ouvrirMentions);
     document.querySelectorAll('[data-fermer="modale-mentions-fond"]').forEach(el => el.addEventListener('click', () => {
-      const modale = document.getElementById('modale-mentions-fond');
-      if (modale) modale.classList.remove('visible');
+      document.getElementById('modale-mentions-fond').classList.remove('visible');
     }));
 
     function appliquerParametresSite(s) {
