@@ -1497,7 +1497,7 @@
 
   <script>
     // ============================================================
-    // STORAGE (Firestore + localStorage) – avec export de saveFile/getFile/delFile
+    // SCRIPT COMPLET CORRIGÉ — de A à Z
     // ============================================================
     firebase.initializeApp({
       apiKey: "AIzaSyARV_E4XtJS13CndRnYQqtjVGP7LcxxPzs",
@@ -1527,7 +1527,6 @@
       function genId(p) { return p + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
       function now() { return new Date().toISOString(); }
 
-      // Fonctions de gestion des fichiers (maintenant exposées)
       function saveFile(id, data) { try { localStorage.setItem('kiosque_fichier_'+id, data); } catch(e) {} }
       function getFile(id) { try { return localStorage.getItem('kiosque_fichier_'+id); } catch(e) { return null; } }
       function delFile(id) { try { localStorage.removeItem('kiosque_fichier_'+id); } catch(e) {} }
@@ -1536,7 +1535,6 @@
       function setSession(s) { localStorage.setItem('kiosque_session', JSON.stringify(s)); }
       function clearSession() { localStorage.removeItem('kiosque_session'); }
 
-      // --- CRUD complet ---
       function getCategories() { return [..._cache.categories]; }
       function getCategoryById(id) { return _cache.categories.find(c => c.id === id) || null; }
       async function createCategory({ nom }) {
@@ -1830,7 +1828,7 @@
 
       return {
         STATUTS, ROLES, genId, now,
-        saveFile, getFile, delFile,  // EXPORTÉS
+        saveFile, getFile, delFile,
         getCategories, getCategoryById, createCategory, updateCategory, deleteCategory,
         getBlogs, getBlogById, createBlog, updateBlog, deleteBlog,
         getArticles, getArticleById, getArticlesByBlog,
@@ -1841,9 +1839,6 @@
       };
     })();
 
-    // ============================================================
-    // AUTH
-    // ============================================================
     const Auth = (() => {
       function login(username, password, ddn) {
         const users = Storage.getUsers();
@@ -1864,9 +1859,6 @@
       return { login, logout, getCurrentUser, isLoggedIn };
     })();
 
-    // ============================================================
-    // UTILITAIRES
-    // ============================================================
     function echapper(t) { const d = document.createElement('div'); d.textContent = t ?? ''; return d.innerHTML; }
     function formaterDateLongue(d) {
       try { const date = new Date(d); return date.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' à ' + String(date.getHours()).padStart(2,'0') + 'h' + String(date.getMinutes()).padStart(2,'0'); } catch { return ''; }
@@ -1877,9 +1869,6 @@
     function debouncer(fn, delay) { let timer; return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); }; }
     function lireFichierEnBase64(f) { return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = () => reject(r.error); r.readAsDataURL(f); }); }
 
-    // ============================================================
-    // PAGE ACCUEIL — grille 2 colonnes, sans placeholder d'image
-    // ============================================================
     let pageCourante = 1;
 
     function prepareAccueilPage() {
@@ -1969,9 +1958,6 @@
       });
     }
 
-    // ============================================================
-    // PAGE ARTICLE (détail) – accessible sans connexion
-    // ============================================================
     function prepareArticlePage(articleId) {
       const detailContainer = document.getElementById('article-detail');
       const filBlog = document.getElementById('article-fil-blog');
@@ -2023,9 +2009,6 @@
       detailContainer.innerHTML = html;
     }
 
-    // ============================================================
-    // MENTIONS LÉGALES
-    // ============================================================
     function ouvrirMentions() {
       const s = Storage.getSettings();
       const contenu = document.getElementById('contenu-mentions-legales');
@@ -2034,9 +2017,6 @@
       if (modale) modale.classList.add('visible');
     }
 
-    // ============================================================
-    // VOLET LATÉRAL
-    // ============================================================
     function mettreAJourVolet() {
       const liste = document.getElementById('liste-rubriques-volet');
       if (!liste) return;
@@ -2081,9 +2061,6 @@
       liste.innerHTML = html;
     }
 
-    // ============================================================
-    // PAGE BLOG (liste simple, pas d'accordéon)
-    // ============================================================
     const blogState = { blog: null, statutActif: 'En ligne' };
 
     function construireFiltresBlog() {
@@ -2164,9 +2141,6 @@
       afficherArticlesBlog();
     }
 
-    // ============================================================
-    // LOGIN
-    // ============================================================
     function prepareLoginPage() {
       const msg = document.getElementById('message-erreur');
       if (msg) { msg.classList.remove('visible'); msg.textContent = ''; }
@@ -2188,9 +2162,6 @@
       else { const msg = document.getElementById('message-erreur'); if (msg) { msg.textContent = res.erreur; msg.classList.add('visible'); } }
     });
 
-    // ============================================================
-    // ROUTEUR SPA
-    // ============================================================
     function navigate(hash) {
       window.location.hash = hash;
       router();
@@ -2250,7 +2221,6 @@
         prepareArticlePage(params.get('id'));
         return;
       }
-      // Accueil
       afficherPage('accueil');
       document.title = nomSite + ' — toutes les publications';
       prepareAccueilPage();
@@ -2260,11 +2230,12 @@
     window.addEventListener('hashchange', router);
 
     // ============================================================
-    // ADMIN — FONCTIONS COMPLÈTES
+    // ADMIN — FONCTIONS COMPLÈTES (CORRIGÉES)
     // ============================================================
     let quillInstance = null;
     let articleEnEditionId = null;
     let piecesJointesTemp = [];
+    let isSaving = false;
 
     function estAdminConnecte() {
       const user = Auth.getCurrentUser();
@@ -2277,7 +2248,6 @@
       document.getElementById('nom-utilisateur').textContent = user.nom || user.username;
       document.getElementById('role-utilisateur').textContent = user.role === 'admin' ? 'Administrateur' : 'Rédacteur';
 
-      // Navigation
       document.querySelectorAll('.nav-admin button[data-vue]').forEach(btn => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('.nav-admin button[data-vue]').forEach(b => b.classList.remove('actif'));
@@ -2294,7 +2264,6 @@
         });
       });
 
-      // Actions rapides
       document.querySelectorAll('.action-rapide').forEach(btn => {
         btn.addEventListener('click', () => {
           const action = btn.dataset.action;
@@ -2309,7 +2278,6 @@
       document.getElementById('btn-nouvel-article').addEventListener('click', ouvrirEditeur);
       document.getElementById('btn-nouveau-compte').addEventListener('click', ouvrirModaleUtilisateur);
 
-      // Fermeture des modales
       document.querySelectorAll('.fermer-modale').forEach(el => {
         el.addEventListener('click', (e) => {
           const id = el.dataset.fermer;
@@ -2317,7 +2285,6 @@
         });
       });
 
-      // Formulaires
       document.getElementById('form-rubrique').addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('rubrique-id').value;
@@ -2443,7 +2410,6 @@
       initialiserGestionPieces();
     }
 
-    // --- FONCTIONS ADMIN (CRUD, affichage) ---
     function fermerModale(id) {
       document.getElementById(id)?.classList.remove('visible');
     }
@@ -2606,7 +2572,6 @@
       document.getElementById('param-maintenance-font-size').value = s.maintenanceFontSize || '2rem';
     }
 
-    // --- MODALES ---
     function ouvrirModaleRubrique(id) {
       const modale = document.getElementById('modale-rubrique-fond');
       document.getElementById('titre-modale-rubrique').textContent = id ? 'Modifier la rubrique' : 'Nouvelle rubrique';
@@ -2676,7 +2641,6 @@
       document.getElementById('modale-profil-fond').classList.add('visible');
     }
 
-    // --- SUPPRESSIONS ---
     async function supprimerRubrique(id) {
       if (confirm('Supprimer cette rubrique ? Les publications seront sans rubrique.')) {
         await Storage.deleteCategory(id);
@@ -2701,7 +2665,6 @@
       }
     }
 
-    // --- DÉTAIL ADMIN ---
     function ouvrirDetailArticleAdmin(id) {
       const article = Storage.getArticleById(id);
       if (!article) return;
@@ -2757,7 +2720,7 @@
       modale.classList.add('visible');
     }
 
-    // --- ÉDITEUR (correction : vérifier que l'article existe) ---
+    // --- ÉDITEUR (corrigé) ---
     function ouvrirEditeur(id) {
       const modale = document.getElementById('modale-editeur-fond');
       document.getElementById('titre-modale-editeur').textContent = id ? 'Modifier l\'article' : 'Nouvel article';
@@ -2770,9 +2733,32 @@
       piecesJointesTemp = [];
       document.getElementById('liste-pieces-jointes').innerHTML = '';
 
+      if (quillInstance) {
+        quillInstance.root.innerHTML = '';
+        quillInstance.update();
+      } else {
+        try {
+          quillInstance = new Quill('#editeur-riche', {
+            theme: 'snow',
+            placeholder: 'Rédigez votre article...',
+            modules: { toolbar: [
+              [{ header: [1,2,3,false] }],
+              ['bold','italic','underline','strike'],
+              [{ list:'ordered'}, { list:'bullet' }],
+              ['link','image','video'],
+              ['clean']
+            ] }
+          });
+          quillInstance.on('text-change', () => { majCompteurContenu(); });
+        } catch(e) {
+          console.error('Erreur initialisation Quill', e);
+          afficherBanniereKiosque('Erreur de l\'éditeur de texte', '#CC1533');
+          return;
+        }
+      }
+
       if (id) {
         const article = Storage.getArticleById(id);
-        // Vérification : si l'article n'existe pas, on affiche un message et on sort
         if (!article) {
           afficherBanniereKiosque('Article introuvable. Il a peut-être été supprimé.', '#CC1533');
           fermerModale('modale-editeur-fond');
@@ -2782,7 +2768,14 @@
         document.getElementById('champ-titre').value = article.titre;
         document.getElementById('champ-resume').value = article.resume || '';
         select.value = article.blogId || '';
-        if (quillInstance) quillInstance.root.innerHTML = article.contenu || '';
+        setTimeout(() => {
+          if (quillInstance) {
+            quillInstance.root.innerHTML = article.contenu || '';
+            quillInstance.update();
+          }
+          majCompteurContenu();
+        }, 100);
+
         if (article.image) {
           document.getElementById('previsualisation-illustration').hidden = false;
           document.getElementById('img-previsualisation-illustration').src = article.image;
@@ -2816,13 +2809,18 @@
         document.getElementById('champ-titre').value = '';
         document.getElementById('champ-resume').value = '';
         select.value = '';
-        if (quillInstance) quillInstance.root.innerHTML = '';
+        if (quillInstance) {
+          quillInstance.root.innerHTML = '';
+          quillInstance.update();
+        }
         document.getElementById('previsualisation-illustration').hidden = true;
         document.getElementById('liste-pieces-jointes').innerHTML = '';
         document.getElementById('btn-supprimer-article').hidden = true;
       }
       majCompteurResume();
       majCompteurContenu();
+      document.getElementById('btn-enregistrer-brouillon').disabled = false;
+      document.getElementById('btn-publier-article').disabled = false;
       modale.classList.add('visible');
     }
 
@@ -2839,39 +2837,55 @@
     document.getElementById('champ-resume').addEventListener('input', majCompteurResume);
 
     async function sauvegarderArticle(statut) {
-      const id = document.getElementById('article-id').value;
-      const blogId = document.getElementById('article-blog').value;
-      const titre = document.getElementById('champ-titre').value.trim();
-      const resume = document.getElementById('champ-resume').value.trim();
-      const contenu = quillInstance ? quillInstance.root.innerHTML : '';
-      const user = Auth.getCurrentUser();
-      const auteur = user ? user.nom || user.username : 'Anonyme';
-      let image = null;
-      const imgEl = document.getElementById('img-previsualisation-illustration');
-      if (imgEl && imgEl.src && imgEl.src.startsWith('data:')) image = imgEl.src;
+      if (isSaving) return;
+      isSaving = true;
+      const btnBrouillon = document.getElementById('btn-enregistrer-brouillon');
+      const btnPublier = document.getElementById('btn-publier-article');
+      btnBrouillon.disabled = true;
+      btnPublier.disabled = true;
 
-      const piecesList = document.getElementById('liste-pieces-jointes');
-      const pieces = [];
-      piecesList.querySelectorAll('.piece-jointe').forEach(li => {
-        const nom = li.querySelector('.nom-fichier')?.textContent || '';
-        const pid = li.querySelector('.btn-retirer-fichier')?.dataset.id || '';
-        let pieceData = piecesJointesTemp.find(p => p.id === pid);
-        if (!pieceData) {
-          const donnees = Storage.getFile(pid);
-          pieceData = { id: pid, nom, donnees };
+      try {
+        const id = document.getElementById('article-id').value;
+        const blogId = document.getElementById('article-blog').value;
+        const titre = document.getElementById('champ-titre').value.trim();
+        const resume = document.getElementById('champ-resume').value.trim();
+        const contenu = quillInstance ? quillInstance.root.innerHTML : '';
+        const user = Auth.getCurrentUser();
+        const auteur = user ? user.nom || user.username : 'Anonyme';
+        let image = null;
+        const imgEl = document.getElementById('img-previsualisation-illustration');
+        if (imgEl && imgEl.src && imgEl.src.startsWith('data:')) image = imgEl.src;
+
+        const piecesList = document.getElementById('liste-pieces-jointes');
+        const pieces = [];
+        piecesList.querySelectorAll('.piece-jointe').forEach(li => {
+          const nom = li.querySelector('.nom-fichier')?.textContent || '';
+          const pid = li.querySelector('.btn-retirer-fichier')?.dataset.id || '';
+          let pieceData = piecesJointesTemp.find(p => p.id === pid);
+          if (!pieceData) {
+            const donnees = Storage.getFile(pid);
+            pieceData = { id: pid, nom, donnees };
+          }
+          pieces.push(pieceData);
+        });
+
+        const data = { blogId, titre, resume, contenu, auteur, statut, image, pieceJointes: pieces };
+        let result;
+        if (id) result = await Storage.updateArticle(id, data);
+        else result = await Storage.createArticle(data);
+        if (result) {
+          fermerModale('modale-editeur-fond');
+          afficherBanniereKiosque(`Article ${statut === 'En ligne' ? 'publié' : 'enregistré'}`, '#1A7A40');
+          rafraichirVueArticles();
+          rafraichirDashboard();
         }
-        pieces.push(pieceData);
-      });
-
-      const data = { blogId, titre, resume, contenu, auteur, statut, image, pieceJointes: pieces };
-      let result;
-      if (id) result = await Storage.updateArticle(id, data);
-      else result = await Storage.createArticle(data);
-      if (result) {
-        fermerModale('modale-editeur-fond');
-        afficherBanniereKiosque(`Article ${statut === 'En ligne' ? 'publié' : 'enregistré'}`, '#1A7A40');
-        rafraichirVueArticles();
-        rafraichirDashboard();
+      } catch (error) {
+        console.error('Erreur sauvegarde article', error);
+        afficherBanniereKiosque('Erreur lors de la sauvegarde', '#CC1533');
+      } finally {
+        isSaving = false;
+        btnBrouillon.disabled = false;
+        btnPublier.disabled = false;
       }
     }
 
@@ -2881,7 +2895,6 @@
       afficherBanniereKiosque(`Statut changé : ${statut}`, '#1A7A40');
     }
 
-    // --- GESTION DES PIÈCES JOINTES (limite 7) ---
     function initialiserGestionPieces() {
       const zoneDepotPieces = document.getElementById('zone-depot-pieces');
       const champPieces = document.getElementById('champ-pieces');
@@ -2889,7 +2902,6 @@
       const MAX_PIECES = 7;
 
       function ajouterPieces(fichiers) {
-        // Convertir FileList en tableau
         const filesArray = Array.from(fichiers);
         const currentCount = piecesList.querySelectorAll('.piece-jointe').length;
         if (currentCount + filesArray.length > MAX_PIECES) {
@@ -2947,7 +2959,6 @@
         });
       }
 
-      // Illustration
       const zoneIllus = document.getElementById('zone-depot-illustration');
       const champIllus = document.getElementById('champ-illustration');
       const preview = document.getElementById('previsualisation-illustration');
@@ -3087,9 +3098,6 @@
     }
     appliquerParametresSite();
 
-    // ============================================================
-    // MODE MAINTENANCE
-    // ============================================================
     function appliquerMaintenance(settings) {
       const s = settings || Storage.getSettings();
       if (s.modeMaintenance && !Auth.isLoggedIn()) {
@@ -3112,9 +3120,6 @@
       }
     }
 
-    // ============================================================
-    // NOTIFICATIONS
-    // ============================================================
     const Notifs = (() => {
       let permission = Notification.permission, swReg = null;
       async function init() {
@@ -3134,9 +3139,6 @@
       return { init, envoyer, get permission() { return permission; } };
     })();
 
-    // ============================================================
-    // DÉMARRAGE
-    // ============================================================
     (function demarrer() {
       const ecran = document.createElement('div');
       ecran.id = 'ecran-chargement';
@@ -3194,9 +3196,6 @@
       }, 8000);
     })();
 
-    // ============================================================
-    // SERVICE WORKER
-    // ============================================================
     if ('serviceWorker' in navigator && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/kiosque/sw.js').then(() => console.log('SW enregistré')).catch(err => console.warn('SW non enregistré :', err));
