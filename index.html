@@ -2063,87 +2063,20 @@
       });
     }
 
-    // ===== PAGE ARTICLE (détail) =====
+    // ============================================================
+    // PAGE ARTICLE (détail) - VERSION CORRIGÉE AVEC PIÈCES JOINTES
+    // ============================================================
     function prepareArticlePage(articleId) {
-  const detailContainer = document.getElementById('article-detail');
-  const filBlog = document.getElementById('article-fil-blog');
-  const btnRetour = document.getElementById('btn-retour-article');
-  if (!detailContainer) return;
+      const detailContainer = document.getElementById('article-detail');
+      const filBlog = document.getElementById('article-fil-blog');
+      const btnRetour = document.getElementById('btn-retour-article');
+      if (!detailContainer) return;
 
-  const article = Storage.getArticleById(articleId);
-  if (!article) {
-    detailContainer.innerHTML = '<p style="color:var(--rust);">Article introuvable.</p>';
-    if (filBlog) filBlog.textContent = 'Introuvable';
-    return;
-  }
-
-  const blog = Storage.getBlogById(article.blogId);
-  const blogNom = blog ? blog.titre : 'Publication inconnue';
-  if (filBlog) filBlog.textContent = blogNom;
-  document.title = article.titre + ' — Kiosque';
-
-  if (blog) btnRetour.onclick = () => navigate('#/blog?id=' + encodeURIComponent(blog.id));
-  else btnRetour.onclick = () => navigate('#/');
-
-  // Auteur info (avatar, bio)
-  let auteurHtml = '';
-  if (article.auteurId) {
-    const auteur = Storage.getUserById(article.auteurId);
-    if (auteur) {
-      auteurHtml = `
-        <div class="auteur-info">
-          <img src="${auteur.avatar || ''}" alt="Avatar" onerror="this.style.display='none'">
-          <div>
-            <div class="nom">${echapper(auteur.nom || auteur.username)}</div>
-            <div class="bio">${echapper(auteur.bio || '')}</div>
-          </div>
-        </div>
-      `;
-    }
-  }
-
-  let html = `
-    <h1>${echapper(article.titre)}</h1>
-    ${auteurHtml}
-    <div class="meta-detail">
-      Par ${echapper(article.auteur)} · 
-      Créé le ${formaterDateCourte(article.dateCreation)} · 
-      Mis à jour le ${formaterDateCourte(article.dateModification)}
-    </div>
-  `;
-  if (article.image) html += `<div class="illustration"><img src="${article.image}" alt="${echapper(article.titre)}"></div>`;
-  if (article.resume) html += `<div class="resume">${echapper(article.resume)}</div>`;
-  html += `<div class="contenu">${article.contenu || '<p><em>Cet article n\'a pas encore de contenu.</em></p>'}</div>`;
-  
-  // === PARTIE CORRIGÉE : Récupération des pièces jointes depuis localStorage ===
-  const pieces = Array.isArray(article.pieceJointes) ? article.pieceJointes : [];
-  if (pieces.length) {
-    // Récupérer les données de chaque pièce jointe depuis localStorage
-    const piecesAvecDonnees = pieces.map(p => {
-      const donnees = Storage.getFile(p.id);
-      return { ...p, donnees: donnees };
-    });
-    // Filtrer les pièces qui ont des données
-    const piecesValides = piecesAvecDonnees.filter(p => p.donnees);
-    const piecesInvalides = piecesAvecDonnees.filter(p => !p.donnees);
-    
-    if (piecesValides.length > 0 || piecesInvalides.length > 0) {
-      html += `<div class="pieces">`;
-      // Pièces valides (téléchargeables)
-      piecesValides.forEach(p => {
-        html += `<a href="${p.donnees}" download="${echapper(p.nom)}" target="_blank">📄 ${echapper(p.nom)}</a>`;
-      });
-      // Pièces invalides (fichiers introuvables)
-      piecesInvalides.forEach(p => {
-        html += `<span style="color:var(--ink-faint);border:1px solid var(--line-strong);border-radius:var(--radius-s);padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">📄 ${echapper(p.nom)} <em style="font-size:0.75rem;">(fichier introuvable)</em></span>`;
-      });
-      html += `</div>`;
-    }
-  }
-  // === FIN DE LA PARTIE CORRIGÉE ===
-
-  detailContainer.innerHTML = html;
-  
+      const article = Storage.getArticleById(articleId);
+      if (!article) {
+        detailContainer.innerHTML = '<p style="color:var(--rust);">Article introuvable.</p>';
+        if (filBlog) filBlog.textContent = 'Introuvable';
+        return;
       }
 
       const blog = Storage.getBlogById(article.blogId);
@@ -2183,10 +2116,34 @@
       if (article.image) html += `<div class="illustration"><img src="${article.image}" alt="${echapper(article.titre)}"></div>`;
       if (article.resume) html += `<div class="resume">${echapper(article.resume)}</div>`;
       html += `<div class="contenu">${article.contenu || '<p><em>Cet article n\'a pas encore de contenu.</em></p>'}</div>`;
+      
+      // === PARTIE CORRIGÉE : Récupération des pièces jointes depuis localStorage ===
       const pieces = Array.isArray(article.pieceJointes) ? article.pieceJointes : [];
       if (pieces.length) {
-        html += `<div class="pieces">${pieces.map(p => `<a href="${p.donnees}" download="${echapper(p.nom)}">📄 ${echapper(p.nom)}</a>`).join('')}</div>`;
+        // Récupérer les données de chaque pièce jointe depuis localStorage
+        const piecesAvecDonnees = pieces.map(p => {
+          const donnees = Storage.getFile(p.id);
+          return { ...p, donnees: donnees };
+        });
+        // Filtrer les pièces qui ont des données
+        const piecesValides = piecesAvecDonnees.filter(p => p.donnees);
+        const piecesInvalides = piecesAvecDonnees.filter(p => !p.donnees);
+        
+        if (piecesValides.length > 0 || piecesInvalides.length > 0) {
+          html += `<div class="pieces">`;
+          // Pièces valides (téléchargeables)
+          piecesValides.forEach(p => {
+            html += `<a href="${p.donnees}" download="${echapper(p.nom)}" target="_blank">📄 ${echapper(p.nom)}</a>`;
+          });
+          // Pièces invalides (fichiers introuvables)
+          piecesInvalides.forEach(p => {
+            html += `<span style="color:var(--ink-faint);border:1px solid var(--line-strong);border-radius:var(--radius-s);padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">📄 ${echapper(p.nom)} <em style="font-size:0.75rem;">(fichier introuvable)</em></span>`;
+          });
+          html += `</div>`;
+        }
       }
+      // === FIN DE LA PARTIE CORRIGÉE ===
+
       detailContainer.innerHTML = html;
     }
 
