@@ -87,7 +87,7 @@
       --shadow-color: rgba(0,0,0,0.4);
     }
 
-    /* ===== STYLES GÉNÉRAUX (inchangés) ===== */
+    /* ===== STYLES GÉNÉRAUX ===== */
     * { box-sizing: border-box; }
     html, body { margin:0; padding:0; }
     html { font-size:16px; scroll-behavior:smooth; }
@@ -1264,7 +1264,7 @@
   <!-- ===== BANDEAU SUPÉRIEUR ===== -->
   <header class="barre-superieure">
     <div class="barre-superieure-gauche">
-    <img src="logo.png" alt="Logo Mon Collège" style="height: 40px; margin-right: 12px;">
+      <img src="logo.png" alt="Logo Mon Collège" style="height: 40px; margin-right: 12px;" onerror="this.style.display='none'">
       <button type="button" class="icone-barre" id="btn-volet-publications" aria-label="Ouvrir la liste des publications">
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
@@ -1387,8 +1387,6 @@
             <button type="button" class="action-rapide" data-action="creer-rubrique"><span class="icone">🏷️</span><span class="libelle">Créer rubrique</span></button>
             <button type="button" class="action-rapide" data-action="creer-blog"><span class="icone">📄</span><span class="libelle">Créer publication</span></button>
             <button type="button" class="action-rapide" data-action="creer-article"><span class="icone">✎</span><span class="libelle">Créer article</span></button>
-            <button type="button" class="action-rapide" data-action="publier"><span class="icone">↑</span><span class="libelle">Publier article</span></button>
-            <button type="button" class="action-rapide" data-action="supprimer"><span class="icone">✕</span><span class="libelle">Supprimer article</span></button>
           </div>
           <div class="carte-entete"><h2>Publications récentes</h2></div>
           <div class="liste-blogs-admin" id="liste-blogs-resume"></div>
@@ -1562,7 +1560,7 @@
 
   <script>
     // ============================================================
-    // SCRIPT COMPLET CORRIGÉ ET AMÉLIORÉ (AUTO-SAVE, RECHERCHE, MODE SOMBRE, PROFIL)
+    // SCRIPT COMPLET CORRIGÉ ET AMÉLIORÉ (AUTO-SAVE, RECHERCHE, MODE SOMBRE, PROFIL, PIÈCES JOINTES)
     // ============================================================
     firebase.initializeApp({
       apiKey: "AIzaSyARV_E4XtJS13CndRnYQqtjVGP7LcxxPzs",
@@ -2122,22 +2120,33 @@
       if (pieces.length) {
         // Récupérer les données de chaque pièce jointe depuis localStorage
         const piecesAvecDonnees = pieces.map(p => {
-          const donnees = Storage.getFile(p.id);
+          // Essayer de récupérer depuis le localStorage
+          let donnees = p.donnees || Storage.getFile(p.id);
+          // Si toujours null, essayer avec le préfixe complet
+          if (!donnees) {
+            try {
+              const raw = localStorage.getItem('kiosque_fichier_' + p.id);
+              if (raw) donnees = raw;
+            } catch(e) {}
+          }
           return { ...p, donnees: donnees };
         });
+        
         // Filtrer les pièces qui ont des données
-        const piecesValides = piecesAvecDonnees.filter(p => p.donnees);
-        const piecesInvalides = piecesAvecDonnees.filter(p => !p.donnees);
+        const piecesValides = piecesAvecDonnees.filter(p => p.donnees && p.donnees.startsWith('data:'));
+        const piecesInvalides = piecesAvecDonnees.filter(p => !p.donnees || !p.donnees.startsWith('data:'));
         
         if (piecesValides.length > 0 || piecesInvalides.length > 0) {
-          html += `<div class="pieces">`;
+          html += `<div class="pieces" style="margin-top:var(--sp-5);display:flex;flex-wrap:wrap;gap:var(--sp-2);">`;
+          
           // Pièces valides (téléchargeables)
           piecesValides.forEach(p => {
-            html += `<a href="${p.donnees}" download="${echapper(p.nom)}" target="_blank">📄 ${echapper(p.nom)}</a>`;
+            html += `<a href="${p.donnees}" download="${echapper(p.nom)}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--line-strong);border-radius:var(--radius-s);color:var(--ink-soft);text-decoration:none;">📄 ${echapper(p.nom)}</a>`;
           });
-          // Pièces invalides (fichiers introuvables)
+          
+          // Pièces invalides (fichiers introuvables) - avec option pour réessayer
           piecesInvalides.forEach(p => {
-            html += `<span style="color:var(--ink-faint);border:1px solid var(--line-strong);border-radius:var(--radius-s);padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">📄 ${echapper(p.nom)} <em style="font-size:0.75rem;">(fichier introuvable)</em></span>`;
+            html += `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--line-strong);border-radius:var(--radius-s);color:var(--ink-faint);">📄 ${echapper(p.nom)} <em style="font-size:0.75rem;color:var(--rust);">(fichier introuvable)</em></span>`;
           });
           html += `</div>`;
         }
@@ -2351,7 +2360,7 @@
     window.addEventListener('hashchange', router);
 
     // ============================================================
-    // ADMIN — FONCTIONS COMPLÈTES (AVEC PROFIL + RECHERCHE)
+    // ADMIN — FONCTIONS COMPLÈTES
     // ============================================================
     let quillInstance = null;
     let articleEnEditionId = null;
@@ -2546,7 +2555,6 @@
       }
 
       initialiserGestionPieces();
-      // Recherche admin articles
       document.getElementById('recherche-admin-articles')?.addEventListener('input', rafraichirVueArticles);
     }
 
@@ -2851,7 +2859,23 @@
 
       const pieces = Array.isArray(article.pieceJointes) ? article.pieceJointes : [];
       const piecesContainer = document.getElementById('detail-pieces');
-      piecesContainer.innerHTML = pieces.length ? pieces.map(p => `<a href="${p.donnees}" download="${echapper(p.nom)}">📄 ${echapper(p.nom)}</a>`).join('') : '';
+      if (pieces.length) {
+        const piecesAvecDonnees = pieces.map(p => {
+          let donnees = p.donnees || Storage.getFile(p.id);
+          if (!donnees) {
+            try {
+              const raw = localStorage.getItem('kiosque_fichier_' + p.id);
+              if (raw) donnees = raw;
+            } catch(e) {}
+          }
+          return { ...p, donnees: donnees };
+        });
+        const piecesValides = piecesAvecDonnees.filter(p => p.donnees && p.donnees.startsWith('data:'));
+        piecesContainer.innerHTML = piecesValides.map(p => `<a href="${p.donnees}" download="${echapper(p.nom)}">📄 ${echapper(p.nom)}</a>`).join('');
+        if (piecesValides.length === 0) piecesContainer.innerHTML = '<span style="color:var(--ink-faint);">Aucune pièce jointe disponible</span>';
+      } else {
+        piecesContainer.innerHTML = '';
+      }
 
       document.getElementById('btn-supprimer-detail').onclick = () => supprimerArticleAdmin(id);
       document.getElementById('btn-modifier-detail').onclick = () => ouvrirEditeur(id);
@@ -2886,7 +2910,7 @@
       modale.classList.add('visible');
     }
 
-    // --- ÉDITEUR (corrigé avec auto-save) ---
+    // --- ÉDITEUR ---
     function ouvrirEditeur(id) {
       const modale = document.getElementById('modale-editeur-fond');
       document.getElementById('titre-modale-editeur').textContent = id ? 'Modifier l\'article' : 'Nouvel article';
